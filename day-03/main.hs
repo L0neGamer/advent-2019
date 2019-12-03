@@ -4,6 +4,7 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Text.Read
+import Data.List
 
 type Coord = (Int, Int)
 data Dir = R | D | L | U deriving (Show, Eq)
@@ -14,14 +15,42 @@ data Wire = WireCons [Coord] deriving (Show, Eq)
 --instance Foldable Wire where
 --  foldr f z (WireCons xs) = WireCons
 
+contents = "R8,U5,L5,D3\nU7,R6,D4,L4"
+--contents = "R75,D30,R83,U83,L12,D49,R71,U7,L72\nU62,R66,U55,R34,D71,R55,D58,R83"
+--contents = "R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51\nU98,R91,D20,R16,D67,R40,U7,R15,U6,R7"
+wires = removeNothing $ fromInputToWires contents
+inters = intersections (wires!!0) (wires!!1)
+route1 = extract (wires!!0)
+route2 = extract (wires!!1)
+leftPath = followPath route1 (3,3)
+rightPath = followPath route2 (3,3)
+f dest = (followPath route1 dest) + (followPath route2 dest)
+res = map f inters
+
 main = do
         contents <- readFile "input.txt"
         print "arg"
+        let
+--            contents = "R8,U5,L5,D3\nU7,R6,D4,L4"
+            wires = removeNothing $ fromInputToWires contents
+            inters = intersections (wires!!0) (wires!!1)
+            route1 = extract (wires!!0)
+            route2 = extract (wires!!1)
+            leftPath = followPath route1 (6,5)
+            rightPath = followPath route2 (6,5)
+            f dest = (followPath route1 dest) + (followPath route2 dest)
+            res = map f inters
+
 --        let testMap = fromStr contents
 --            val' = execute 0 (Just (Map.insert 2 21 (Map.insert 1 76 testMap)))
 --            val = iter (map (\a -> (execute 0 (Just a))) (allPerms testMap)) 0 0
 --        print val
         print $ sol contents
+        print $ inters
+        print leftPath
+        print rightPath
+        print $ minimum res
+
 
 --iter :: [Maybe (Map Int Int)] -> Int -> Int -> Maybe (Int, Int)
 --iter [] noun verb = Nothing
@@ -90,31 +119,19 @@ sol inpStr = minimum $ map (manhattan (0,0)) inter
 
 manhattan (x1,y1) (x2,y2) = abs (x1-x2) + abs (y1-y2)
 
---findIntersection :: Coord -> Coord -> Coord -> Coord -> Maybe Coord
---findIntersection v1@(x1,y1) v2@(x2,y2) v3@(x3,y3) v4@(x4,y4)
---  | x1 == x2 && y3 == y4 = findIntersection' (v1,v2) (v3,v4)
---  | x3 == x4 && y1 == y2 = findIntersection' (v3,v4) (v1,v2)
---  | otherwise = Nothing
---
---findIntersection' vert@((x1,y1),(x2,y2)) horiz@((x3,y3),(x4,y4))
---  | vertCheck && horizCheck = Just (x1, y3)
---  | otherwise = Nothing
---  where vertCheck = (y1 >= y3 && y2 <= y3) || (y2 >= y3 && y1 <= y3)
---        horizCheck = (x1 >= x3 && x2 <= x3) || (x2 >= x3 && x1 <= x3)
---findIntersection (x1,y1) (x2,y2) (x3,y3) (x4,y4)
---  | t >= 0 && t <= 1 = Just (round ((fromIntegral x1)+t*(fromIntegral (x2-x1))), round ((fromIntegral y1)+t*(fromIntegral (y2-y1))))
---  | otherwise = Nothing
---  where denom = (x1-x2)*(y3-y4) - (y1-y2)*(x3-x4)
---        t | denom == 0 = -1 :: Float
---          | otherwise = (fromIntegral ((x1-x3)*(y3-y4) - (y1-y3)*(x3-x4))) / (fromIntegral denom) :: Float
---  where t = div ((x1-x2)(y2-1) - (y1-y2)(x2-1)) ((x1-1)(y2-1) - (y1-1)(x2-1))
+listFromAndTo a b
+  | a <= b = [a..b]
+  | a > b = reverse [b..a]
+
+genCoordLst :: Coord -> Coord -> [Coord]
+genCoordLst a@(ax,ay) b@(bx,by) = [(x,y) | x <- (listFromAndTo ax bx), y <- (listFromAndTo ay by)]
+--  where xbot = min ax bx
+--        xtop = max ax bx
+--        ybot = min ay by
+--        ytop = max ay by
 
 genSet :: Coord -> Coord -> Set.Set Coord
-genSet a@(ax,ay) b@(bx,by) = Set.fromList [(x,y) | x <- [xbot..xtop], y <- [ybot..ytop]]
-  where xbot = min ax bx
-        xtop = max ax bx
-        ybot = min ay by
-        ytop = max ay by
+genSet a@(ax,ay) b@(bx,by) = Set.fromList (genCoordLst a b)
 
 genSetCoords :: [Coord] -> Set.Set Coord
 genSetCoords coords@(a:b:xs) = Set.union (genSet a b) (genSetCoords (b:xs))
@@ -128,6 +145,37 @@ genSetWire (WireCons _) =  Set.empty
 
 intersections :: Wire -> Wire -> [Coord]
 intersections (WireCons w1) (WireCons w2) = Set.toList $ Set.intersection (genSetCoords $ tail w1) (genSetCoords $ tail w2)
+
+extractEither :: Either a a -> a
+extractEither (Left a) = a
+extractEither (Right a) = a
+
+isLeft :: Either a b -> Bool
+isLeft (Left _) = True
+isLeft (Right _) = False
+
+followPath :: [Coord] -> Coord -> Int
+followPath (a:b:xs) dest = val
+  where followedPath = followPath' a b dest
+        val | isLeft followedPath = extractEither followedPath
+            | otherwise = extractEither followedPath + followPath (b:xs) dest - 1
+followPath _ _ = 0
+
+followPath' :: Coord -> Coord -> Coord -> Either Int Int
+followPath' c1 c2 dest = ret
+  where lineLst = genCoordLst c1 c2
+        ret = followPath'' (lineLst) dest 0
+
+followPath'' :: [Coord] -> Coord -> Int -> Either Int Int
+followPath'' [] _ acc = Right (acc)
+followPath'' (x:xs) dest acc
+  | x == dest = Left (acc)
+  | otherwise = followPath'' xs dest (acc+1)
+
+numFromMaybe :: Num a => Maybe a -> a
+numFromMaybe (Just a) = a
+numFromMaybe Nothing = 0
+
 --intersections (WireCons (x1:x2:xs)) (WireCons (y1:y2:ys)) = findIntersection x1 x2 y1 y2 : intersections (WireCons (x2:xs)) (WireCons (y2:ys)) ++ intersections (WireCons (x1:x2:xs)) (WireCons (y2:ys)) ++ intersections (WireCons (x2:xs)) (WireCons (y1:y2:ys))
 --intersections _ _ = []
 --intersections (WireEnd) _ = []
