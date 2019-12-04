@@ -6,6 +6,7 @@ import qualified Data.Set as Set
 import Text.Read
 import Data.List
 import System.CPUTime
+import Data.Maybe
 
 splitStr :: String -> Char -> [String]
 splitStr str split = wordsWhen (==split) str
@@ -17,31 +18,19 @@ wordsWhen p s =  case dropWhile p s of
                       s' -> w : wordsWhen p s''
                             where (w, s'') = break p s'
 
-maybeIfy :: [Maybe a] -> Maybe [a]
-maybeIfy [] = Just []
-maybeIfy (Nothing:xs) = Nothing
-maybeIfy ((Just a):xs) = maybeIfy xs >>= \x -> Just (a:x)
+removeNothing = catMaybes
 
-extractEither :: Either a a -> a
-extractEither (Left a) = a
-extractEither (Right a) = a
+maybeIfy = sequence
+
+extractEither = either id id
 
 isLeft :: Either a b -> Bool
 isLeft (Left _) = True
 isLeft (Right _) = False
 
-removeDupes xs = removeDupes' xs []
-
-removeDupes' :: Eq a => [a] -> [a] -> [a]
-removeDupes' [] xs = xs
-removeDupes' (a:as) xs
-  | a `elem` xs = removeDupes' as xs
-  | otherwise = removeDupes' as (a:xs)
-
 type Coord = (Int, Int)
 data Dir = R | D | L | U deriving (Show, Eq)
 type Direction = (Dir, Int)
---data Wire = WireCons Coord Wire | WireEnd deriving (Show, Eq)
 data Wire = WireCons [Coord] deriving (Show, Eq)
 
 main = do
@@ -62,7 +51,6 @@ main = do
         print "Part 2"
         print $ minimum res
         end   <- timeDif middle
---        end   <- timeDif start
         print ""
 
 makeLines :: Wire -> [[Coord]]
@@ -148,12 +136,3 @@ followPath'' [] _ acc = Right acc
 followPath'' (x:xs) dest acc
   | x == dest = Left acc
   | otherwise = followPath'' xs dest (acc+1)
-
-numFromMaybe :: Num a => Maybe a -> a
-numFromMaybe (Just a) = a
-numFromMaybe Nothing = 0
-
-removeNothing :: [Maybe a] -> [a]
-removeNothing [] = []
-removeNothing (Nothing:xs) = removeNothing xs
-removeNothing ((Just a):xs) = a : removeNothing xs
