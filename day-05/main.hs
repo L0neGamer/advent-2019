@@ -18,8 +18,8 @@ data Op = Input -- Int -- writes to this Int
         | Mul Param Param -- Param Param Int
         | Add Param Param -- Param Param Int
         | Halt
-        | JmpNZ Param
-        | JmpOZ Param
+        | JmpNZ Param Param
+        | JmpOZ Param Param
         | LessThan Param Param
         | EqualTo Param Param
         deriving Show
@@ -55,12 +55,22 @@ runProg map i out = next
 
 runBinOp f p1 p2 i map = (Map.insert (getItem Abs (i+3) map) (f (getItem p1 (i+1) map) (getItem p2 (i+2) map)) map, i + 4, "", False)
 
+runJmp f p1 p2 i map
+  | f (getItem p1 (i+1) map) = (map, getItem p2 (i+2) map, "", False)
+  | otherwise = (map, i+3, "", False)
+
+boolFToInt f a b = fromEnum (f a b)
+
 runOp :: Op -> Int -> Map Int Int -> (Map Int Int, Int, String, Bool)
 runOp (Add p1 p2) i map = runBinOp (+) p1 p2 i map
-runOp (Mul p1 p2) i map = (Map.insert (getItem Abs (i+3) map) ((getItem p1 (i+1) map) * (getItem p2 (i+2) map)) map, i + 4, "", False)
+runOp (Mul p1 p2) i map = runBinOp (*) p1 p2 i map
+runOp (LessThan p1 p2) i map = runBinOp (boolFToInt (<)) p1 p2 i map
+runOp (EqualTo p1 p2) i map = runBinOp (boolFToInt (==)) p1 p2 i map
+runOp (JmpNZ p1 p2) i map = runJmp (/= 0) p1 p2 i map
+runOp (JmpOZ p1 p2) i map = runJmp (== 0) p1 p2 i map
 runOp (Halt) i map = (map, i + 1, "", True)
 runOp (Output p1) i map = (map, i + 2, show $ getItem p1 (i+1) map, False)
-runOp (Input) i map = (Map.insert (getItem Abs (i+1) map) (1) map, i + 2, "", False)
+runOp (Input) i map = (Map.insert (getItem Abs (i+1) map) (5) map, i + 2, "", False)
 
 extractMaybe (Just x) = x
 extractMaybe Nothing = error "tried to access Nothing"
@@ -102,8 +112,8 @@ constructOp 1 p1 p2 = Add p1 p2
 constructOp 2 p1 p2 = Mul p1 p2
 constructOp 3 _ _ = Input
 constructOp 4 p1 _ = Output p1
-constructOp 5 p1 _ = JmpNZ p1
-constructOp 6 p1 _ = JmpOZ p1
+constructOp 5 p1 p2 = JmpNZ p1 p2
+constructOp 6 p1 p2 = JmpOZ p1 p2
 constructOp 7 p1 p2 = LessThan p1 p2
 constructOp 8 p1 p2 = EqualTo p1 p2
 constructOp 99 _ _ = Halt
