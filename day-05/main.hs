@@ -10,21 +10,20 @@ wordsWhen p s =  case dropWhile p s of
                       s' -> w : wordsWhen p s''
                             where (w, s'') = break p s'
 
---data ParamRel = Rel Int
---data ParamAbs = Abs Int
 data Param = Rel | Abs deriving Show
-data Op = Input -- Int -- writes to this Int
-        | Output Param -- Param
-        | Mul Param Param -- Param Param Int
-        | Add Param Param -- Param Param Int
+data Op = Input -- Int
+        | Output Param
+        | Mul Param Param -- Int
+        | Add Param Param -- Int
         | Halt
-        | JmpNZ Param Param
-        | JmpOZ Param Param
-        | LessThan Param Param
-        | EqualTo Param Param
+        | JmpNZ Param Param -- Int
+        | JmpOZ Param Param -- Int
+        | LessThan Param Param -- Int
+        | EqualTo Param Param -- Int
         deriving Show
 data Register = RegO Op
-              | RegI Int deriving Show
+              | RegI Int
+              deriving Show
 
 main = do
         contents <- readFile "input.txt"
@@ -45,6 +44,7 @@ runProg map i out = next
         next | not halt = runProg map' i' strs
              | otherwise = (map', strs)
 
+runBinOp :: (Int -> Int -> Int) -> Param -> Param -> Int -> Map Int Int -> (Map Int Int, Int, String, Bool)
 runBinOp f p1 p2 i map = (Map.insert (getItem Abs (i+3) map) (f (getItem p1 (i+1) map) (getItem p2 (i+2) map)) map, i + 4, "", False)
 
 runJmp f p1 p2 i map
@@ -54,15 +54,15 @@ runJmp f p1 p2 i map
 boolFToInt f a b = fromEnum (f a b)
 
 runOp :: Op -> Int -> Map Int Int -> (Map Int Int, Int, String, Bool)
-runOp (Add p1 p2) i map = runBinOp (+) p1 p2 i map
-runOp (Mul p1 p2) i map = runBinOp (*) p1 p2 i map
-runOp (LessThan p1 p2) i map = runBinOp (boolFToInt (<)) p1 p2 i map
-runOp (EqualTo p1 p2) i map = runBinOp (boolFToInt (==)) p1 p2 i map
-runOp (JmpNZ p1 p2) i map = runJmp (/= 0) p1 p2 i map
-runOp (JmpOZ p1 p2) i map = runJmp (== 0) p1 p2 i map
-runOp (Halt) i map = (map, i + 1, "", True)
-runOp (Output p1) i map = (map, i + 2, show $ getItem p1 (i+1) map, False)
-runOp (Input) i map = (Map.insert (getItem Abs (i+1) map) (5) map, i + 2, "", False)
+runOp (Add p1 p2)       = runBinOp (+) p1 p2
+runOp (Mul p1 p2)       = runBinOp (*) p1 p2
+runOp (LessThan p1 p2)  = runBinOp (boolFToInt (<)) p1 p2
+runOp (EqualTo p1 p2)   = runBinOp (boolFToInt (==)) p1 p2
+runOp (JmpNZ p1 p2)     = runJmp (/= 0) p1 p2
+runOp (JmpOZ p1 p2)     = runJmp (== 0) p1 p2
+runOp (Halt)            = \i map -> (map, i + 1, "", True)
+runOp (Output p1)       = \i map -> (map, i + 2, show $ getItem p1 (i+1) map, False)
+runOp (Input)           = \i map -> (Map.insert (getItem Abs (i+1) map) (5) map, i + 2, "", False)
 
 getItem :: Param -> Int -> Map Int Int -> Int
 getItem Abs i map = map Map.! i
@@ -72,7 +72,7 @@ fromInput :: String -> Map Int Int
 fromInput str = parseList (fromStr str)
 
 fromStr :: String -> [Int]
-fromStr str = map (read) stringLst
+fromStr str = map read stringLst
   where stringLst = wordsWhen (==',') str
 
 enumerate :: [a] -> [(Int, a)]
@@ -90,20 +90,20 @@ getParamOp '0' = Rel
 getParamOp '1' = Abs
 
 parseOp :: String -> Op
-parseOp [x] = parseOp ['0',x]
-parseOp [y,x] = constructOp (read [y,x]) Rel Rel
-parseOp (x':y:[x]) = constructOp (read [y,x]) (getParamOp x') Rel
+parseOp [x]            = parseOp ['0',x]
+parseOp [y,x]          = constructOp (read [y,x]) Rel Rel
+parseOp (x':y:[x])     = constructOp (read [y,x]) (getParamOp x') Rel
 parseOp (x'':x':y:[x]) = constructOp (read [y,x]) (getParamOp x') (getParamOp x'')
-parseOp xs = error $ "error on " ++ show xs
+parseOp xs             = error $ "error on " ++ show xs
 
 constructOp :: Int -> Param -> Param -> Op
 constructOp 1 p1 p2 = Add p1 p2
 constructOp 2 p1 p2 = Mul p1 p2
-constructOp 3 _ _ = Input
-constructOp 4 p1 _ = Output p1
+constructOp 3 _  _  = Input
+constructOp 4 p1 _  = Output p1
 constructOp 5 p1 p2 = JmpNZ p1 p2
 constructOp 6 p1 p2 = JmpOZ p1 p2
 constructOp 7 p1 p2 = LessThan p1 p2
 constructOp 8 p1 p2 = EqualTo p1 p2
-constructOp 99 _ _ = Halt
-constructOp x _ _ = error $ "error on " ++ show x
+constructOp 99 _ _  = Halt
+constructOp x  _  _ = error $ "error on " ++ show x
