@@ -17,21 +17,60 @@ data Op = Input -- Int -- writes to this Int
         | Output Param -- Param
         | Mul Param Param -- Param Param Int
         | Add Param Param -- Param Param Int
-        | Halt deriving Show
+        | Halt
+        | JmpNZ Param
+        | JmpOZ Param
+        | LessThan Param Param
+        | EqualTo Param Param
+        deriving Show
 data Register = RegO Op
               | RegI Int deriving Show
 
 main = do
         contents <- readFile "input.txt"
         print "arg"
---        let testMap = fromStr contents
+        let testMap = fromInput contents
+        print testMap
+        let res = runProg testMap 0 []
+        print res
 --            val' = execute 0 (Just (Map.insert 2 21 (Map.insert 1 76 testMap)))
 --            val = iter (map (\a -> (execute 0 (Just a))) (allPerms testMap)) 0 0
 --        print val
 --        print val'
 
-fromInput :: String -> Map Int Register
-fromInput str = parseList 0 (fromStr str)
+--runProgram :: Map Int Int -> Map Int Int
+
+
+runStr :: String -> (Map Int Int, [String])
+runStr str = runProg (fromInput str) 0 []
+
+runProg :: Map Int Int -> Int -> [String] -> (Map Int Int, [String])
+runProg map i out = next
+  where op = parseOp $ (show $ map Map.! i)
+        (map', i', outStr, halt) = runOp op i map
+        strs | length outStr > 0 = out ++ [outStr]
+             | otherwise = out
+        next | not halt = runProg map' i' strs
+             | otherwise = (map', strs)
+
+runBinOp f p1 p2 i map = (Map.insert (getItem Abs (i+3) map) (f (getItem p1 (i+1) map) (getItem p2 (i+2) map)) map, i + 4, "", False)
+
+runOp :: Op -> Int -> Map Int Int -> (Map Int Int, Int, String, Bool)
+runOp (Add p1 p2) i map = runBinOp (+) p1 p2 i map
+runOp (Mul p1 p2) i map = (Map.insert (getItem Abs (i+3) map) ((getItem p1 (i+1) map) * (getItem p2 (i+2) map)) map, i + 4, "", False)
+runOp (Halt) i map = (map, i + 1, "", True)
+runOp (Output p1) i map = (map, i + 2, show $ getItem p1 (i+1) map, False)
+runOp (Input) i map = (Map.insert (getItem Abs (i+1) map) (1) map, i + 2, "", False)
+
+extractMaybe (Just x) = x
+extractMaybe Nothing = error "tried to access Nothing"
+
+getItem :: Param -> Int -> Map Int Int -> Int
+getItem Abs i map = map Map.! i
+getItem Rel i map = map Map.! (map Map.! i)
+
+fromInput :: String -> Map Int Int
+fromInput str = parseList (fromStr str)
 
 fromStr :: String -> [Int]
 fromStr str = map (read) stringLst
@@ -44,32 +83,46 @@ enumerate' :: [a] -> Int -> [(Int, a)]
 enumerate' [] _ = []
 enumerate' (x:xs) i = (i, x):enumerate' xs (i+1)
 
-parseList :: Int -> [Int] -> Map Int Register
-parseList i [] = Map.fromList []
-parseList i (x:xs) = parsedList
-  where parsedOp = parseOp (show x) xs
-        processedOps = (1 + length xs) - (length $ fst parsedOp)
-
-        parsedList = Map.union (parseList (i + processedOps) (snd parsedOp)) (Map.fromList (enumerate' (fst parsedOp) i))
+parseList :: [Int] -> Map Int Int
+parseList xs = Map.fromList $ enumerate xs
 
 getParamOp :: Char -> Param
 getParamOp '0' = Rel
 getParamOp '1' = Abs
 
-parseOp :: String -> [Int] -> ([Register], [Int])
-parseOp [x] ops = parseOp ['0',x] ops
-parseOp [y,x] ops = constructOp (read [y,x]) Rel Rel ops
-parseOp (x':y:[x]) ops = constructOp (read [y,x]) (getParamOp x') Rel ops
-parseOp (x'':x':y:[x]) ops = constructOp (read [y,x]) (getParamOp x') (getParamOp x'') ops
-parseOp xs ops = ([RegI (read xs)], ops)
+parseOp :: String -> Op
+parseOp [x] = parseOp ['0',x]
+parseOp [y,x] = constructOp (read [y,x]) Rel Rel
+parseOp (x':y:[x]) = constructOp (read [y,x]) (getParamOp x') Rel
+parseOp (x'':x':y:[x]) = constructOp (read [y,x]) (getParamOp x') (getParamOp x'')
+parseOp xs = error $ "error on " ++ show xs
 
-constructOp :: Int -> Param -> Param -> [Int] -> ([Register], [Int])
-constructOp 1 p1 p2 (x:x':x'':xs) = (RegO (Add p1 p2):RegI x:RegI x':RegI x'':[], xs)
-constructOp 2 p1 p2 (x:x':x'':xs) = (RegO (Mul p1 p2):RegI x:RegI x':RegI x'':[], xs)
-constructOp 3 _ _ (x:xs) = (RegO Input:RegI x:[], xs)
-constructOp 4 p1 _ (x:xs) = (RegO (Output p1):RegI x:[], xs)
-constructOp 99 _ _ xs = ([RegO Halt], xs)
-constructOp x _ _ xs = ([RegI x], xs) --error $ "error on " ++ show x ++ ", lst:" ++ show xs
+constructOp :: Int -> Param -> Param -> Op
+constructOp 1 p1 p2 = Add p1 p2
+constructOp 2 p1 p2 = Mul p1 p2
+constructOp 3 _ _ = Input
+constructOp 4 p1 _ = Output p1
+constructOp 5 p1 _ = JmpNZ p1
+constructOp 6 p1 _ = JmpOZ p1
+constructOp 7 p1 p2 = LessThan p1 p2
+constructOp 8 p1 p2 = EqualTo p1 p2
+constructOp 99 _ _ = Halt
+constructOp x _ _ = error $ "error on " ++ show x
+
+--parseOp :: String -> [Int] -> ([Register], [Int])
+--parseOp [x] ops = parseOp ['0',x] ops
+--parseOp [y,x] ops = constructOp (read [y,x]) Rel Rel ops
+--parseOp (x':y:[x]) ops = constructOp (read [y,x]) (getParamOp x') Rel ops
+--parseOp (x'':x':y:[x]) ops = constructOp (read [y,x]) (getParamOp x') (getParamOp x'') ops
+--parseOp xs ops = ([RegI (read xs)], ops)
+--
+--constructOp :: Int -> Param -> Param -> [Int] -> ([Register], [Int])
+----constructOp 1 p1 p2 (x:x':x'':xs) = (RegO (Add p1 p2):RegI x:RegI x':RegI x'':[], xs)
+--constructOp 2 p1 p2 (x:x':x'':xs) = (RegO (Mul p1 p2):RegI x:RegI x':RegI x'':[], xs)
+--constructOp 3 _ _ (x:xs) = (RegO Input:RegI x:[], xs)
+--constructOp 4 p1 _ (x:xs) = (RegO (Output p1):RegI x:[], xs)
+--constructOp 99 _ _ xs = ([RegO Halt], xs)
+--constructOp x _ _ xs = ([RegI x], xs) --error $ "error on " ++ show x ++ ", lst:" ++ show xs
 
 
 --iter :: [Maybe (Map Int Int)] -> Int -> Int -> Maybe (Int, Int)
