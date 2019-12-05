@@ -106,4 +106,4 @@ constructOp 6 p1 p2 = JmpOZ p1 p2
 constructOp 7 p1 p2 = LessThan p1 p2
 constructOp 8 p1 p2 = EqualTo p1 p2
 constructOp 99 _ _  = Halt
-constructOp x  _  _ = error $ "error on " ++ show x
+constructOp x  _ _  = error $ "error on " ++ show x
