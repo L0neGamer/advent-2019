@@ -13,18 +13,15 @@ wordsWhen p s =  case dropWhile p s of
 data Param = Rel | Abs deriving Show
 data Op = Input -- Int
         | Output Param
-        | BinOp (Int -> Int -> Int) Param Param
---        | Mul Param Param -- Int
---        | Add Param Param -- Int
+        | BinOp (Int -> Int -> Int) Param Param -- Int
         | Halt
         | JmpNZ Param Param -- Int
         | JmpOZ Param Param -- Int
---        | LessThan Param Param -- Int
---        | EqualTo Param Param -- Int
---        deriving Show
-data Register = RegO Op
-              | RegI Int
---              deriving Show
+type Mem = Map Int Int
+type ProgCount = Int
+type InputVals = [Int]
+type OutputVals = [String]
+data ProgramState = ProgStat Mem ProgCount InputVals OutputVals Bool
 
 main = do
         contents <- readFile "input.txt"
@@ -54,10 +51,6 @@ runJmp f p1 p2 i map
 boolFToInt f a b = fromEnum (f a b)
 
 runOp :: Op -> Int -> Map Int Int -> (Map Int Int, Int, String, Bool)
---runOp (Add p1 p2)       = runBinOp (+) p1 p2
---runOp (Mul p1 p2)       = runBinOp (*) p1 p2
---runOp (LessThan p1 p2)  = runBinOp (boolFToInt (<)) p1 p2
---runOp (EqualTo p1 p2)   = runBinOp (boolFToInt (==)) p1 p2
 runOp (BinOp f p1 p2)   = runBinOp f p1 p2
 runOp (JmpNZ p1 p2)     = runJmp (/= 0) p1 p2
 runOp (JmpOZ p1 p2)     = runJmp (== 0) p1 p2
