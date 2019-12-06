@@ -13,21 +13,21 @@ wordsWhen p s =  case dropWhile p s of
 data Param = Rel | Abs deriving Show
 data Op = Input -- Int
         | Output Param
-        | Mul Param Param -- Int
-        | Add Param Param -- Int
+        | BinOp (Int -> Int -> Int) Param Param
+--        | Mul Param Param -- Int
+--        | Add Param Param -- Int
         | Halt
         | JmpNZ Param Param -- Int
         | JmpOZ Param Param -- Int
-        | LessThan Param Param -- Int
-        | EqualTo Param Param -- Int
-        deriving Show
+--        | LessThan Param Param -- Int
+--        | EqualTo Param Param -- Int
+--        deriving Show
 data Register = RegO Op
               | RegI Int
-              deriving Show
+--              deriving Show
 
 main = do
         contents <- readFile "input.txt"
-        print "arg"
         let testMap = fromInput contents
         let res = runProg testMap 0 []
         print res
@@ -54,10 +54,11 @@ runJmp f p1 p2 i map
 boolFToInt f a b = fromEnum (f a b)
 
 runOp :: Op -> Int -> Map Int Int -> (Map Int Int, Int, String, Bool)
-runOp (Add p1 p2)       = runBinOp (+) p1 p2
-runOp (Mul p1 p2)       = runBinOp (*) p1 p2
-runOp (LessThan p1 p2)  = runBinOp (boolFToInt (<)) p1 p2
-runOp (EqualTo p1 p2)   = runBinOp (boolFToInt (==)) p1 p2
+--runOp (Add p1 p2)       = runBinOp (+) p1 p2
+--runOp (Mul p1 p2)       = runBinOp (*) p1 p2
+--runOp (LessThan p1 p2)  = runBinOp (boolFToInt (<)) p1 p2
+--runOp (EqualTo p1 p2)   = runBinOp (boolFToInt (==)) p1 p2
+runOp (BinOp f p1 p2)   = runBinOp f p1 p2
 runOp (JmpNZ p1 p2)     = runJmp (/= 0) p1 p2
 runOp (JmpOZ p1 p2)     = runJmp (== 0) p1 p2
 runOp (Halt)            = \i map -> (map, i + 1, "", True)
@@ -97,13 +98,13 @@ parseOp (x'':x':y:[x]) = constructOp (read [y,x]) (getParamOp x') (getParamOp x'
 parseOp xs             = error $ "error on " ++ show xs
 
 constructOp :: Int -> Param -> Param -> Op
-constructOp 1 p1 p2 = Add p1 p2
-constructOp 2 p1 p2 = Mul p1 p2
+constructOp 1 p1 p2 = BinOp (+) p1 p2
+constructOp 2 p1 p2 = BinOp (*) p1 p2
+constructOp 7 p1 p2 = BinOp (boolFToInt (<)) p1 p2
+constructOp 8 p1 p2 = BinOp (boolFToInt (==)) p1 p2
 constructOp 3 _  _  = Input
 constructOp 4 p1 _  = Output p1
 constructOp 5 p1 p2 = JmpNZ p1 p2
 constructOp 6 p1 p2 = JmpOZ p1 p2
-constructOp 7 p1 p2 = LessThan p1 p2
-constructOp 8 p1 p2 = EqualTo p1 p2
 constructOp 99 _ _  = Halt
 constructOp x  _ _  = error $ "error on " ++ show x
