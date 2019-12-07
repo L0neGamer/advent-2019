@@ -25,7 +25,14 @@ type ProgramCounter = Int
 type InputVals = [Int]
 type OutputVals = [String]
 data EndState = Halted | AwaitInput | Running deriving (Show, Eq)
-data ProgramState = ProgStat Mem ProgramCounter InputVals OutputVals EndState deriving Show
+data ProgramState = ProgStat
+  { mem            :: Mem
+  , programCounter :: ProgramCounter
+  , inputVals      :: InputVals
+  , outputVals     :: OutputVals
+  , endState       :: EndState
+  } deriving Show
+
 
 main = do
         contentsT1 <- readFile "testinput.txt"
@@ -50,43 +57,36 @@ main = do
         print res
 
 getOutput :: ProgramState -> Int
-getOutput ps@(ProgStat _ _ _ (x:xs) _) = read x
---getOutput ps@(ProgStat _ _ _ (xs) _) = trace (show ps) $ (read (xs!!0))
+getOutput ps = read $ head $ outputVals ps
 
 runForAmplifiersPt1 :: [Int] -> Int -> String -> Int
 runForAmplifiersPt1 [] prev _ = prev
 runForAmplifiersPt1 inp prev str = runForAmplifiersPt1 (tail inp) (getOutput ps) str
   where ps = runStr str (head inp:[prev])
 
-itemAt (x:xs) 0 = x
-itemAt (x:xs) n = itemAt xs (n-1)
-
 replaceAt n xs x = fst splitLst ++ [x] ++ (tail $ snd splitLst)
   where splitLst = splitAt n xs
 
 checkProgress :: [Maybe ProgramState] -> Bool
-checkProgress (Nothing:_) = False
-checkProgress (Just (ProgStat _ _ _ _ Halted):xs) = True && checkProgress xs
+checkProgress (Just (ProgStat _ _ _ _ Halted):xs) = checkProgress xs
 checkProgress [] = True
 checkProgress xs = False
 
-changeInput (ProgStat mem pc inp out stop) xs = ProgStat mem pc xs [] Running
+changeInput (ProgStat mem pc inp out stop) xs = ProgStat mem pc xs out Running
 
 runForAmplifiersPt2 :: [Int] -> [Maybe ProgramState] -> Int -> Int -> String -> Int
-runForAmplifiersPt2 xs pss 3 0 str = error "gets here"
-runForAmplifiersPt2 phases pss phaseIndex prev str = x --runForAmplifiersPt2 phases pss (nextItem) (read $ head out) str
-  where ps@(ProgStat mem pc inp' out stop)
-          | isNothing (pss!!phaseIndex) = runStr str ((itemAt phases phaseIndex):[prev])
-          | otherwise = runProg (changeInput (fromJust (pss!!phaseIndex)) ([prev]))
+runForAmplifiersPt2 phases pss phaseIndex prev str = x
+  where maybePs = pss!!phaseIndex
+        ps | isNothing maybePs = runStr str ((phases!!phaseIndex):[prev])
+           | otherwise = runProg (changeInput (fromJust maybePs) [prev])
         outVal = getOutput ps
-        nextItem = mod (phaseIndex + 1) $ length phases
-        newPss = (replaceAt phaseIndex pss (Just ps))
-        x | stop == AwaitInput = runForAmplifiersPt2 phases newPss nextItem outVal str
-          | checkProgress newPss = outVal
-          | otherwise = runForAmplifiersPt2 phases newPss nextItem outVal str
+        newPss = replaceAt phaseIndex pss (Just ps)
+        nextIndex = mod (phaseIndex + 1) (length phases)
+        x | checkProgress newPss = outVal
+          | otherwise = runForAmplifiersPt2 phases newPss nextIndex outVal str
 
 runStr :: String -> [Int] -> ProgramState
-runStr str inputs = runProg $ ProgStat (fromInput str) 0 inputs [] Running -- (fromInput str) 0 []
+runStr str inputs = runProg $ ProgStat (fromInput str) 0 inputs [] Running
 
 runProg :: ProgramState -> ProgramState
 runProg ps@(ProgStat mem pc _ _ _) = next
