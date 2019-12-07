@@ -36,8 +36,10 @@ main = do
 --        contents <- readFile "jessinput.txt"
         let four = [0..4]
             combos = permutations four
-            res = sort $ map (\inp -> (runForAmplifiersPt1 inp 0 contents, inp)) combos
+            combos' = permutations [5..9]
+--            res = sort $ map (\inp -> (runForAmplifiersPt1 inp 0 contents, inp)) combos
 --            res = sort $ map (\inp -> (runForAmplifiers inp 0 contentsT1, inp)) combos
+            res = sort $ map (\inp -> (runForAmplifiersPt2 inp [Nothing | _ <- four] 0 0 contents)) combos'
 --            res' = runStr contents [4,3,2,1,0]
 --        print combos
 --        print res'
@@ -45,7 +47,7 @@ main = do
         print $ runForAmplifiersPt1 [0,1,2,3,4] 0 contentsT2
         print $ runForAmplifiersPt1 [1,0,4,3,2] 0 contentsT3
         print $ runForAmplifiersPt2 [9,8,7,6,5] [Nothing | _ <- four] 0 0 contentsT4
---        print res
+        print res
 
 getOutput :: ProgramState -> Int
 getOutput ps@(ProgStat _ _ _ (x:xs) _) = read x
@@ -68,18 +70,18 @@ checkProgress (Just (ProgStat _ _ _ _ Halted):xs) = True && checkProgress xs
 checkProgress [] = True
 checkProgress xs = False
 
-changeInput (ProgStat mem pc inp out stop) xs = ProgStat mem pc xs [] stop
+changeInput (ProgStat mem pc inp out stop) xs = ProgStat mem pc xs [] Running
 
 runForAmplifiersPt2 :: [Int] -> [Maybe ProgramState] -> Int -> Int -> String -> Int
 runForAmplifiersPt2 xs pss 3 0 str = error "gets here"
 runForAmplifiersPt2 phases pss phaseIndex prev str = x --runForAmplifiersPt2 phases pss (nextItem) (read $ head out) str
   where ps@(ProgStat mem pc inp' out stop)
           | isNothing (pss!!phaseIndex) = runStr str ((itemAt phases phaseIndex):[prev])
-          | otherwise = runProg (changeInput (fromJust (pss!!phaseIndex)) ((itemAt phases phaseIndex):[prev]))
+          | otherwise = runProg (changeInput (fromJust (pss!!phaseIndex)) ([prev]))
         outVal = getOutput ps
         nextItem = mod (phaseIndex + 1) $ length phases
-        newPss = trace (show ps) (replaceAt phaseIndex pss (Just ps))
-        x | stop == AwaitInput = trace (show $ map (isNothing) newPss) $ runForAmplifiersPt2 phases newPss nextItem outVal str
+        newPss = (replaceAt phaseIndex pss (Just ps))
+        x | stop == AwaitInput = runForAmplifiersPt2 phases newPss nextItem outVal str
           | checkProgress newPss = outVal
           | otherwise = runForAmplifiersPt2 phases newPss nextItem outVal str
 
