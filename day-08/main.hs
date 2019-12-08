@@ -26,14 +26,10 @@ timeDif x = do
 main = do
         contents <- readFile "input.txt"
         contents' <- readFile "testinput.txt"
-        let four = [0..4]
-            image = intoLayers (toListOfLists contents 25) 6
+        let image = intoLayers (toListOfLists contents 25) 6
             res = minimum $ map getDigits $ image
             strForm = toStr $ squashLayers image
             replaced = replace (replace strForm '0' ' ') '1' '#'
---            res = fromStringGetMinRow contents 25
---            res' = fromStringGetMinRow contents' 3
---            res' = zipWith (\x y -> )
         start <- getCPUTime
         print res
         print $ image
@@ -59,7 +55,7 @@ squashLayers [x] = x
 squashLayers (x:y:xs) = squashLayers ((getTop x y):xs)
 
 getTop :: Layer -> Layer -> Layer
-getTop x y = zipWith (\xstr ystr -> zipWith getTop' xstr ystr) x y
+getTop x y = zipWith (zipWith getTop') x y
   where getTop' '2' i = i
         getTop' i _ = i
 
@@ -82,28 +78,6 @@ intoLayers' :: [String] -> Int -> (Layer,[String])
 intoLayers' xs 0 = ([], xs)
 intoLayers' (x:xs) i = (x:row, rem)
   where (row, rem) = intoLayers' xs (i-1)
-
---toListOfInts' :: [String] -> Int -> [Int]
---toListOfInts' (x:xs) 0 = []
---toListOfInts' (x:y:xs) i = toListOfInts' ((zipWith (\x' y' -> [x', y']) x y) :xs) (i-1)
-
---func' :: [String] -> Int -> [String] -> ([String], [String])
---func' rows 0 chars = (chars, rows)
---func' rows i [] = func' rows i ["" | _ <- [0..(i)]]
---func' (r:rows) remainingRows chars = func' rows (remainingRows - 1) $ zipWith (\str char -> str ++ [char]) chars r
---
---func :: [String] -> Int -> [[[Char]]]
---func [] rowDepth = []
---func rows rowDepth = chars: func rows' rowDepth
---  where (chars, rows') = func' rows rowDepth []
---
---funcCaller :: Int -> Int -> Int -> [String] -> [[String]]
---funcCaller rows cols strsLen strs = func strs div'
---  where div' = trace ("div'"++(show $ (div (div strsLen rows) cols))) (div (div strsLen rows) cols)
---
---toListOfInts :: [String] -> [[Int]]
---toListOfInts [] = []
---toListOfInts (x:y:xs) = (zipWith (\x' y' -> read $ [x', y']) x y) : toListOfInts xs
 
 toListOfLists :: String -> Int -> [String]
 toListOfLists [] width = []
