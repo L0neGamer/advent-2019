@@ -157,14 +157,24 @@ parseOp (x''':x'':x':y:[x]) = constructOp (read [y,x]) (getParamOp x') (getParam
 parseOp xs                  = error $ "parse error on " ++ show xs
 
 constructOp :: Integer -> Param -> Param -> Param -> Op
-constructOp 1 p1 p2 p3 = BinOp (SF2 (+) "+") p1 p2 p3
-constructOp 2 p1 p2 p3 = BinOp (SF2 (*) "*") p1 p2 p3
-constructOp 7 p1 p2 p3 = BinOp (SF2 (boolFToInteger (<)) "<") p1 p2 p3
-constructOp 8 p1 p2 p3 = BinOp (SF2 (boolFToInteger (==)) "==") p1 p2 p3
+constructOp 1 p1 p2 p3 = BinOp (msf "+") p1 p2 p3
+constructOp 2 p1 p2 p3 = BinOp (msf "*") p1 p2 p3
+constructOp 7 p1 p2 p3 = BinOp (msf "<") p1 p2 p3
+constructOp 8 p1 p2 p3 = BinOp (msf "==") p1 p2 p3
+constructOp 5 p1 p2 _  = JmpIf (msf "/=0") p1 p2
+constructOp 6 p1 p2 _  = JmpIf (msf "==0") p1 p2
 constructOp 3 p1 _  _  = Input (simplifyParam p1)
 constructOp 4 p1 _  _  = Output p1
-constructOp 5 p1 p2 _  = JmpIf (SF1 (boolFToInteger (/=) 0) "/=0") p1 p2
-constructOp 6 p1 p2 _  = JmpIf (SF1 (boolFToInteger (==) 0) "==0") p1 p2
 constructOp 9 p1 _  _  = RelBase p1
 constructOp 99 _ _  _  = Halt
 constructOp x  _ _  _  = error $ "cons error on " ++ show x
+
+msf = makeStoredFunc
+
+makeStoredFunc :: String -> StoredFunc
+makeStoredFunc "+" = SF2 (+) "+"
+makeStoredFunc "*" = SF2 (*) "*"
+makeStoredFunc "<" = SF2 (boolFToInteger (<)) "<"
+makeStoredFunc "==" = SF2 (boolFToInteger (==)) "=="
+makeStoredFunc "/=0" = SF1 (boolFToInteger (/=) 0) "/=0"
+makeStoredFunc "==0" = SF1 (boolFToInteger (==) 0) "==0"
