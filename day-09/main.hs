@@ -110,7 +110,7 @@ runOp (RelBase p1)       (ProgStat mem pc inp out rel _) = ProgStat mem (pc + 2)
 setItem :: Param -> ProgramCounter -> Integer -> Mem -> RelativeBase -> Mem
 setItem Rel pc val mem rel = Map.insert rel' val mem
   where rel' = rel + getItem Imm pc mem rel
-setItem Imm pc val mem rel = Map.insert (getItem Imm pc mem rel) val mem
+setItem Pos pc val mem rel = Map.insert (getItem Imm pc mem rel) val mem
 
 getItem :: Param -> ProgramCounter -> Mem -> RelativeBase -> Integer
 getItem Imm i mem _  = mem !? i
@@ -146,13 +146,13 @@ getParamOp '2' = Rel
 
 simplifyParam :: Param -> Param
 simplifyParam Rel = Rel
-simplifyParam _ = Imm
+simplifyParam Pos = Pos
 
 parseOp :: String -> Op
 parseOp [x]                 = parseOp ['0',x]
-parseOp [y,x]               = constructOp (read [y,x]) Pos Pos Imm
-parseOp (x':y:[x])          = constructOp (read [y,x]) (getParamOp x') Pos Imm
-parseOp (x'':x':y:[x])      = constructOp (read [y,x]) (getParamOp x') (getParamOp x'') Imm
+parseOp [y,x]               = constructOp (read [y,x]) Pos Pos Pos
+parseOp (x':y:[x])          = constructOp (read [y,x]) (getParamOp x') Pos Pos
+parseOp (x'':x':y:[x])      = constructOp (read [y,x]) (getParamOp x') (getParamOp x'') Pos
 parseOp (x''':x'':x':y:[x]) = constructOp (read [y,x]) (getParamOp x') (getParamOp x'') (simplifyParam $ getParamOp x''')
 parseOp xs                  = error $ "parse error on " ++ show xs
 
