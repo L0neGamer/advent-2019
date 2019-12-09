@@ -1,7 +1,6 @@
 import System.IO
 import Control.Monad
-import Data.Map (Map)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.List
 import Data.Maybe
 import System.CPUTime
@@ -38,7 +37,7 @@ data Op = Input Param
         | JmpIf StoredFunc Param Param
         | RelBase Param
         deriving Show
-type Mem = Map Integer Integer
+type Mem = Map.Map Integer Integer
 type ProgramCounter = Integer
 type RelativeBase = Integer
 type InputVals = [Integer]
@@ -119,7 +118,7 @@ getItem Imm i mem _  = mem !? i
 getItem Pos i mem _  = mem !? (mem !? i)
 getItem Rel i mem rb = mem !? (rb + (mem !? i))
 
-(!?) :: (Ord k, Num v) => Map k v -> k -> v
+(!?) :: (Ord k, Num v) => Map.Map k v -> k -> v
 mem !? key = Map.findWithDefault 0 key mem
 
 fromInput :: String -> Mem
