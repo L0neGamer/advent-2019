@@ -22,7 +22,7 @@ timeDif x = do
 
 data Param = Pos | Imm | Rel deriving Show
 data StoredFunc = SF2 (Integer -> Integer -> Integer) String | SF1 (Integer -> Integer) String
-data Op = Input Param -- Integer
+data Op = Input Param
         | Output Param
         | BinOp StoredFunc Param Param Param
         | Halt
@@ -59,57 +59,17 @@ main = do
         contentsT3 <- readFile "test3input.txt"
         contentsT4 <- readFile "test4input.txt"
         contents <- readFile "input.txt"
---        contents <- readFile "jessinput.txt"
         let four = [0..4]
             combos = permutations four
             combos' = permutations [5..9]
---            res = sort $ map (\inp -> (runForAmplifiersPt1 inp 0 contents, inp)) combos
---            res = sort $ map (\inp -> (runForAmplifiers inp 0 contentsT1, inp)) combos
---            res2 = sort $ map (\inp -> (runForAmplifiersPt2 inp [Nothing | _ <- four] 0 0 contents, inp)) combos'
---            res' = runStr contents [4,3,2,1,0]
---        print combos
---        print res'
         start <- getCPUTime
---        print $ runForAmplifiersPt1 [4,3,2,1,0] 0 contents7T1
---        print $ runForAmplifiersPt1 [0,1,2,3,4] 0 contentsT2
---        print $ runForAmplifiersPt1 [1,0,4,3,2] 0 contentsT3
---        print $ runForAmplifiersPt2 [9,8,7,6,5] [Nothing | _ <- four] 0 0 contentsT4
---        print $ runStr contentsT1 [1..10]
---        print $ runStr contentsT2 [1..10]
---        print $ runStr contentsT3 [1..10]
---        print $ runStr "109,100,21101,5,6,-1,99" [1400]
         print $ runStr contents [2]
         middle <- timeDif start
---        print $ last res2
         end <- timeDif middle
         print $ ""
 
-getOutput :: ProgramState -> Integer
-getOutput ps = head $ outputVals ps
-
-runForAmplifiersPt1 :: [Integer] -> Integer -> String -> Integer
-runForAmplifiersPt1 [] prev _ = prev
-runForAmplifiersPt1 inp prev str = runForAmplifiersPt1 (tail inp) (getOutput ps) str
-  where ps = runStr str (head inp:[prev])
-
 replaceAt n xs x = fst splitLst ++ [x] ++ (tail $ snd splitLst)
   where splitLst = splitAt (fromInteger n) xs
-
-checkProgress :: [Maybe ProgramState] -> Bool
-checkProgress (Just (ProgStat _ _ _ _ _ Halted):xs) = checkProgress xs
-checkProgress [] = True
-checkProgress xs = False
-
-runForAmplifiersPt2 :: [Integer] -> [Maybe ProgramState] -> Integer -> Integer -> String -> Integer
-runForAmplifiersPt2 phases pss phaseIndex prev str
-  | checkProgress newPss = outVal
-  | otherwise = runForAmplifiersPt2 phases newPss nextIndex outVal str
-  where maybePs = pss!!(fromInteger phaseIndex)
-        ps | isNothing maybePs = runStr str ((phases!!(fromInteger phaseIndex)):[prev])
-           | otherwise = runProg (setEndState (setInput (fromJust maybePs) [prev]) Running)
-        outVal = getOutput ps
-        newPss = replaceAt phaseIndex pss (Just ps)
-        nextIndex = (mod (phaseIndex + 1) (toInteger $ length phases))
 
 runStr :: String -> [Integer] -> ProgramState
 runStr str inputs = runProg $ ProgStat (fromInput str) 0 inputs [] 0 Running
@@ -123,8 +83,7 @@ runBinOp :: StoredFunc -> Param -> Param -> Param -> ProgramState -> ProgramStat
 runBinOp f p1 p2 p3 (ProgStat mem pc inp out rel _) = ProgStat mem' (pc + 4) inp out rel Running
   where x = getItem p1 (pc + 1) mem rel
         y = getItem p2 (pc + 2) mem rel
---        ins = getItem p3 (pc + 3) mem rel
-        mem' = setItem p3 (pc + 3) (callFunc f x y) mem rel--Map.insert ins (f x y) mem
+        mem' = setItem p3 (pc + 3) (callFunc f x y) mem rel
 
 runJmp :: StoredFunc -> Param -> Param -> ProgramState -> ProgramState
 runJmp f p1 p2 ps@(ProgStat mem pc _ _ rel _) = setProgramCounter ps pc'
@@ -136,7 +95,6 @@ boolFToInteger f a b = toInteger $ fromEnum (f a b)
 setInput (ProgStat mem pc _ out rel es) inp = ProgStat mem pc inp out rel es
 setEndState (ProgStat mem pc inp out rel _) es = ProgStat mem pc inp out rel es
 setProgramCounter (ProgStat mem _ inp out rel es) pc = ProgStat mem pc inp out rel es
---setRelativeBase (ProgStat mem pc inp out _ es) rel = ProgStat mem pc inp out rel es
 
 runOp :: Op -> ProgramState -> ProgramState
 runOp (BinOp f p1 p2 p3) ps = runBinOp f p1 p2 p3 ps
@@ -145,14 +103,11 @@ runOp (Halt)             ps = setEndState ps Halted
 runOp (Output p1)        (ProgStat mem pc inp out rel _) = ProgStat mem (pc + 2) inp ((getItem p1 (pc + 1) mem rel):out) rel Running
 runOp (Input p1)         ps@(ProgStat _ _ [] _ _ _) = setEndState ps AwaitInput
 runOp (Input p1)         (ProgStat mem pc (i:inp) out rel _) = ProgStat mem' (pc + 2) inp out rel Running
---  where mem' = Map.insert (getItem Imm (pc + 1) mem rel) i mem
   where mem' = setItem p1 (pc + 1) i mem rel
 runOp (RelBase p1)       (ProgStat mem pc inp out rel _) = ProgStat mem (pc + 2) inp out (rel + relDif) Running
   where relDif = getItem p1 (pc + 1) mem rel
 
 setItem :: Param -> ProgramCounter -> Integer -> Mem -> RelativeBase -> Mem
---setItem Imm pc val mem rel = Map.insert (getItem Imm pc mem rel) val mem
---setItem Pos pc val mem rel = Map.insert (getItem Pos pc mem rel) val mem
 setItem Rel pc val mem rel = Map.insert rel' val mem
   where rel' = rel + getItem Imm pc mem rel
 setItem Imm pc val mem rel = Map.insert (getItem Imm pc mem rel) val mem
@@ -199,7 +154,7 @@ parseOp [y,x]               = constructOp (read [y,x]) Pos Pos Imm
 parseOp (x':y:[x])          = constructOp (read [y,x]) (getParamOp x') Pos Imm
 parseOp (x'':x':y:[x])      = constructOp (read [y,x]) (getParamOp x') (getParamOp x'') Imm
 parseOp (x''':x'':x':y:[x]) = constructOp (read [y,x]) (getParamOp x') (getParamOp x'') (simplifyParam $ getParamOp x''')
-parseOp xs             = error $ "parse error on " ++ show xs
+parseOp xs                  = error $ "parse error on " ++ show xs
 
 constructOp :: Integer -> Param -> Param -> Param -> Op
 constructOp 1 p1 p2 p3 = BinOp (SF2 (+) "+") p1 p2 p3
