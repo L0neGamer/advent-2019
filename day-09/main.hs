@@ -2,7 +2,6 @@ import System.IO
 import Control.Monad
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Debug.Trace
 import Data.List
 import Data.Maybe
 import System.CPUTime
@@ -20,6 +19,16 @@ timeDif x = do
              print $ (fromIntegral (y-x))/(10^9)
              return y
 
+fromStr :: String -> Char -> [String]
+fromStr str c = wordsWhen (==c) str
+
+enumerate :: [a] -> [(Integer, a)]
+enumerate xs = enumerate' xs 0
+
+enumerate' :: [a] -> Integer -> [(Integer, a)]
+enumerate' [] _ = []
+enumerate' (x:xs) i = (i, x):enumerate' xs (i+1)
+
 data Param = Pos | Imm | Rel deriving Show
 data StoredFunc = SF2 (Integer -> Integer -> Integer) String | SF1 (Integer -> Integer) String
 data Op = Input Param
@@ -36,12 +45,12 @@ type InputVals = [Integer]
 type OutputVals = [Integer]
 data EndState = Halted | AwaitInput | Running deriving (Show, Eq)
 data ProgramState = ProgStat
-  { mem            :: Mem
-  , programCounter :: ProgramCounter
-  , inputVals      :: InputVals
-  , outputVals     :: OutputVals
-  , relBase        :: RelativeBase
-  , endState       :: EndState
+  { mem            :: !Mem
+  , programCounter :: !ProgramCounter
+  , inputVals      :: !InputVals
+  , outputVals     :: !OutputVals
+  , relBase        :: !RelativeBase
+  , endState       :: !EndState
   } deriving Show
 
 instance Show StoredFunc where
@@ -53,20 +62,12 @@ callFunc (SF2 f _) a b = f a b
 callFunc (SF1 f _) a _ = f a
 
 main = do
-        contents7T1 <- readFile "../day-07/testinput.txt"
-        contentsT1 <- readFile "testinput.txt"
-        contentsT2 <- readFile "test2input.txt"
-        contentsT3 <- readFile "test3input.txt"
-        contentsT4 <- readFile "test4input.txt"
         contents <- readFile "input.txt"
-        let four = [0..4]
-            combos = permutations four
-            combos' = permutations [5..9]
         start <- getCPUTime
         print $ runStr contents [2]
         middle <- timeDif start
         end <- timeDif middle
-        print $ ""
+        putStr ""
 
 replaceAt n xs x = fst splitLst ++ [x] ++ (tail $ snd splitLst)
   where splitLst = splitAt (fromInteger n) xs
@@ -110,7 +111,8 @@ runOp (RelBase p1)       (ProgStat mem pc inp out rel _) = ProgStat mem (pc + 2)
 setItem :: Param -> ProgramCounter -> Integer -> Mem -> RelativeBase -> Mem
 setItem Rel pc val mem rel = Map.insert rel' val mem
   where rel' = rel + getItem Imm pc mem rel
-setItem Pos pc val mem rel = Map.insert (getItem Imm pc mem rel) val mem
+setItem Pos pc val mem rel = Map.insert index val mem
+  where index = getItem Imm pc mem rel
 
 getItem :: Param -> ProgramCounter -> Mem -> RelativeBase -> Integer
 getItem Imm i mem _  = mem !? i
@@ -118,26 +120,13 @@ getItem Pos i mem _  = mem !? (mem !? i)
 getItem Rel i mem rb = mem !? (rb + (mem !? i))
 
 (!?) :: (Ord k, Num v) => Map k v -> k -> v
-mem !? key
-  | key `Map.member` mem = mem Map.! key
-  | otherwise = 0
+mem !? key = Map.findWithDefault 0 key mem
 
 fromInput :: String -> Mem
-fromInput str = parseList (fromStr str)
+fromInput str = parseList (fromStr str ',')
 
-fromStr :: String -> [Integer]
-fromStr str = map read stringLst
-  where stringLst = wordsWhen (==',') str
-
-enumerate :: [a] -> [(Integer, a)]
-enumerate xs = enumerate' xs 0
-
-enumerate' :: [a] -> Integer -> [(Integer, a)]
-enumerate' [] _ = []
-enumerate' (x:xs) i = (i, x):enumerate' xs (i+1)
-
-parseList :: [Integer] -> Map Integer Integer
-parseList xs = Map.fromList $ enumerate xs
+parseList :: [String] -> Mem
+parseList xs = Map.fromList $ enumerate $ map read xs
 
 getParamOp :: Char -> Param
 getParamOp '0' = Pos
@@ -145,8 +134,8 @@ getParamOp '1' = Imm
 getParamOp '2' = Rel
 
 simplifyParam :: Param -> Param
-simplifyParam Rel = Rel
-simplifyParam Pos = Pos
+simplifyParam Imm = error "tried to simplify an immediate access param"
+simplifyParam x = x
 
 parseOp :: String -> Op
 parseOp [x]                 = parseOp ['0',x]
