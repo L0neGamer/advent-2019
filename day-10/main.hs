@@ -42,37 +42,22 @@ data MyFrac = MFrac Int Int deriving (Show)
 
 instance Eq MyFrac where
   (MFrac x y) == (MFrac x' y') = x==x' && y==y'
---    where isNegTrue = (not (isNeg x `xor` isNeg x')) && (not (isNeg y `xor` isNeg y'))
---  (MFrac x y) == (MFrac x' y') = isNegTrue && (((fromIntegral x)/(fromIntegral y)) == ((fromIntegral x')/(fromIntegral y')))
---    where isNegTrue = (not (isNeg x `xor` isNeg x')) && (not (isNeg y `xor` isNeg y'))
 
 instance Ord MyFrac where
   m@(MFrac x y) `compare` m'@(MFrac x' y')
    | m == m' = EQ
    | y == y' = x `compare` x'
    | otherwise = y `compare` y'
---   | otherwise = ((fromIntegral x)/(fromIntegral y)) `compare` ((fromIntegral x')/(fromIntegral y'))
 
 main = do
         contents <- readFile "input.txt"
---        contents <- readFile "inputtest1.txt"
---        contents <- readFile "inputtest2.txt"
---        contents <- readFile "inputtest3.txt"
         let asteroids = getAsteroids contents
             anglesFromStart = map (angleFrom (head asteroids)) (tail asteroids)
             visibleFrom = map (\a -> (length (getVisible a asteroids), getVisible a asteroids, a)) asteroids
-            mem = (getVisible' (1,2) (closestTo (1,2) asteroids))
             center@(t,as',c) = last $ sort visibleFrom
         start <- getCPUTime
---        print $ closestTo (head asteroids) (tail asteroids)
---        print $ getVisible (head asteroids) (tail asteroids)
---        print $ last $ sort visibleFrom
---        print $ (cherryPick $ findVaporised (11,13) asteroids)
         print center
         print $ (cherryPick $ findVaporised c (closestTo c asteroids))!!199
---        print $ findVaporised'' $ M.toList $ findVaporised' (11,13) (closestTo (11,13) asteroids)
---        print mem
---        print $mem M.! (MFrac 0 1)
         middle <- timeDif start
         end <- timeDif middle
         putStr ""
@@ -149,23 +134,10 @@ findVaporised' o (a:as) = M.insert myFrac (a:prev) next
         prev = M.findWithDefault [] myFrac next
 
 toAngle :: RealFloat a => MyFrac -> a
-toAngle m@(MFrac x y) = mod' (((atan2 (y') x' + (pi/2))) + (20*pi)) (2 * pi)
---  | not (isNeg x) && not (isNeg y) = atan (x'/y')
---  | isNeg x && isNeg y = pi + atan (x'/y')
---  | otherwise = atan
+toAngle m@(MFrac x y) = mod' ((atan2 (y') x' + (pi/2)) + (2*pi)) (2 * pi)
   where x' = fromIntegral x
         y' = fromIntegral y
 
 clockWiseOrder :: MyFrac -> MyFrac -> Ordering
-clockWiseOrder m@(MFrac x y) m'@(MFrac x' y') = toAngle m `compare` toAngle m'
---  | m == m' = EQ
---  | x == x' = specialCompare y y'
---  | otherwise = specialCompare x x'
-
---specialCompare :: (Num a, Ord a) => a -> a -> Ordering
---specialCompare a b
---  | isNeg a && isNeg b = (abs a) `compare` (abs b)
---  | isNeg a && not (isNeg b) = GT
---  | not (isNeg a) && isNeg b = LT
---  | otherwise = a `compare` b
+clockWiseOrder m m' = toAngle m `compare` toAngle m'
 
