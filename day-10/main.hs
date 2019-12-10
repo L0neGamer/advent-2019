@@ -40,7 +40,8 @@ getSign a = floor (a' / (abs a'))
   where a' = fromIntegral a
 
 type Coord = (Int, Int)
-type MyFrac = (Ratio Int, Ordering)
+--type MyFrac = (Ratio Int, Ordering)
+data MyFrac = MFrac Int Int deriving (Show, Eq, Ord)
 
 main = do
         contents <- readFile "input.txt"
@@ -62,9 +63,13 @@ replaceAt n xs x = fst splitLst ++ [x] ++ (tail $ snd splitLst)
   where splitLst = splitAt (fromInteger n) xs
 
 consMyFrac :: Int -> Int -> MyFrac
-consMyFrac x y
-  | y == 0 = (getSign x % 1, EQ)
-  | otherwise = (x % y, y `compare` 0)
+--consMyFrac x y
+--  | y == 0 = (getSign x % 1, EQ)
+--  | otherwise = (x % y, y `compare` 0)
+consMyFrac x y = MFrac (div x gcd'') (div y gcd'')
+  where gcd' = gcd x y
+        gcd'' | gcd' == 0 = 1
+              | otherwise = gcd'
 
 angleFrom :: Coord -> Coord -> MyFrac
 angleFrom (x, y) (x', y') = consMyFrac x'' y''
@@ -128,14 +133,17 @@ cherryPick' ((x:xs):as) = (x:lhs, xs:rhs)
   where (lhs, rhs) = cherryPick' as
 
 toAngle :: RealFloat a => MyFrac -> a
-toAngle (m, o) = mod' ((atan2 y' x' + (pi/2)) + (2*pi)) (2 * pi)
-  where x'' = fromIntegral $ numerator m
-        y'' = fromIntegral $ denominator m
-        x' | o == LT && y'' > 0 = -x''
-           | otherwise = x''
-        y' | o == LT && y'' > 0 = -y''
-           | o == EQ = 0
-           | otherwise = y''
+toAngle m@(MFrac x y) = mod' ((atan2 (y') x' + (pi/2)) + (2*pi)) (2 * pi)
+  where x' = fromIntegral x
+        y' = fromIntegral y
+--toAngle (m, o) = mod' ((atan2 y' x' + (pi/2)) + (2*pi)) (2 * pi)
+--  where x'' = fromIntegral $ numerator m
+--        y'' = fromIntegral $ denominator m
+--        x' | o == LT && y'' > 0 = -x''
+--           | otherwise = x''
+--        y' | o == LT && y'' > 0 = -y''
+--           | o == EQ = 0
+--           | otherwise = y''
 
 clockWiseOrder :: MyFrac -> MyFrac -> Ordering
 clockWiseOrder m m' = toAngle m `compare` toAngle m'
