@@ -1,6 +1,6 @@
 import System.IO
 import Control.Monad
-import qualified Data.Map as M
+import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import Data.List
 import Data.Maybe
@@ -30,10 +30,6 @@ enumerate xs = enumerate' xs 0
 enumerate' :: [a] -> Integer -> [(Integer, a)]
 enumerate' [] _ = []
 enumerate' (x:xs) i = (i, x):enumerate' xs (i+1)
-
-xor True False = True
-xor False True = True
-xor _ _ = False
 
 getSign :: (Num a, Ord a, Integral a) => a -> a
 getSign a = floor (a' / (abs a'))
@@ -133,9 +129,12 @@ cherryPick' ((x:xs):as) = (x:lhs, xs:rhs)
   where (lhs, rhs) = cherryPick' as
 
 toAngle :: RealFloat a => MyFrac -> a
-toAngle m@(MFrac x y) = mod' ((atan2 (y') x' + (pi/2)) + (2*pi)) (2 * pi)
+toAngle m@(MFrac x y)
+ | res < 0 = res + 2 * pi
+ | otherwise = res
   where x' = fromIntegral x
         y' = fromIntegral y
+        res = atan2 y' x' + pi/2
 --toAngle (m, o) = mod' ((atan2 y' x' + (pi/2)) + (2*pi)) (2 * pi)
 --  where x'' = fromIntegral $ numerator m
 --        y'' = fromIntegral $ denominator m
