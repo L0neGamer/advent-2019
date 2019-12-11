@@ -49,9 +49,9 @@ main = do
             picked = cherryPick $ findVaporised c (closestTo c asteroids)
         start <- getCPUTime
         print center
-        print $ picked
-        print $ picked!!199
         middle <- timeDif start
+--        print $ picked
+        print $ picked!!199
         end <- timeDif middle
         putStr ""
 
