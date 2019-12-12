@@ -11,18 +11,13 @@ data Moon = Moon {pos::Vector, vel::Vector} deriving (Show, Eq)
 
 main = do
         contents <- readFile "input.txt"
---        contents <- readFile "inputtest.txt"
---        contents <- readFile "inputtest2.txt"
         let lines = toLines contents
             moons = map (initMoon.toVector.fromLine) (notEmpty lines)
             moons' = steps 1000 moons
             energy = (sum.(map energyMoon)) moons'
-        start <- getCPUTime
         print energy
-        middle <- timeDif start
         print $ findRestart moons
-        end <- timeDif middle
-        putStr ""
+--        putStr ""
 
 notEmpty :: [[a]] -> [[a]]
 notEmpty [] = []
@@ -30,7 +25,7 @@ notEmpty ([]:xs) = notEmpty xs
 notEmpty (x:xs) = x:notEmpty xs
 
 funcVec :: (Integer -> Integer -> Integer) -> Vector -> Vector -> Vector
-funcVec f (Vector x y z) (Vector x' y' z') = Vector (f x x') (f y y') (f z z')
+funcVec f !(Vector x y z) !(Vector x' y' z') = Vector (f x x') (f y y') (f z z')
 
 compInt :: Integer -> Integer -> Integer
 compInt x x'
@@ -61,7 +56,7 @@ findWhen n f ms
   | otherwise = findWhen (n + 1) f (step ms)
 
 findWhenSingle :: Integer -> (Integer, Integer, Integer) -> ([Moon] -> Bool, [Moon] -> Bool, [Moon] -> Bool) -> [Moon] -> (Integer, Integer, Integer)
-findWhenSingle n vs@(x, y, z) fs@(fx,fy,fz) !ms
+findWhenSingle n vs@(x, y, z) fs@(fx,fy,fz) ms
   | x > 0 && y > 0 && z > 0 = vs
   | otherwise = findWhenSingle (n + 1) (x', y', z') fs (step ms)
   where helper ff f | f == 0 && ff ms = n
@@ -96,7 +91,7 @@ adjustAllVel ms = map (flip adjustVel ms) ms
 
 adjustVel :: Moon -> [Moon] -> Moon
 adjustVel m [] = m
-adjustVel (Moon {..}) ((Moon pos' _):ms) = adjustVel m' ms
+adjustVel Moon{..} (m'@(Moon pos' _):ms) = adjustVel m' ms
   where m' = Moon pos $ funcVec (+) vel (compVec pos pos')
 
 initMoon :: Vector -> Moon
