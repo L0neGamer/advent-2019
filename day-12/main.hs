@@ -24,7 +24,7 @@ main = do
         end <- timeDif middle
         putStr ""
 
---notEmpty :: [[a]] -> [[a]]
+notEmpty :: [[a]] -> [[a]]
 notEmpty [] = []
 notEmpty ([]:xs) = notEmpty xs
 notEmpty (x:xs) = x:notEmpty xs
