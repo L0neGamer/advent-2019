@@ -56,7 +56,7 @@ findWhen n f ms
   | otherwise = findWhen (n + 1) f (step ms)
 
 findWhenSingle :: Integer -> (Integer, Integer, Integer) -> ([Moon] -> Bool, [Moon] -> Bool, [Moon] -> Bool) -> [Moon] -> (Integer, Integer, Integer)
-findWhenSingle n vs@(x, y, z) fs@(fx,fy,fz) ms
+findWhenSingle n vs@(x, y, z) fs@(fx,fy,fz) !ms
   | x > 0 && y > 0 && z > 0 = vs
   | otherwise = findWhenSingle (n + 1) (x', y', z') fs (step ms)
   where helper ff f | f == 0 && ff ms = n
