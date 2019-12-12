@@ -14,7 +14,7 @@ main = do
 --        contents <- readFile "inputtest.txt"
 --        contents <- readFile "inputtest2.txt"
         let lines = toLines contents
-            moons = map (initMoon.toVector.fromLine) (init lines)
+            moons = map (initMoon.toVector.fromLine) (notEmpty lines)
             moons' = steps 1000 moons
             energy = (sum.(map energyMoon)) moons'
         start <- getCPUTime
@@ -23,6 +23,11 @@ main = do
         print $ findRestart moons
         end <- timeDif middle
         putStr ""
+
+--notEmpty :: [[a]] -> [[a]]
+notEmpty [] = []
+notEmpty ([]:xs) = notEmpty xs
+notEmpty (x:xs) = x:notEmpty xs
 
 funcVec :: (Integer -> Integer -> Integer) -> Vector -> Vector -> Vector
 funcVec f (Vector x y z) (Vector x' y' z') = Vector (f x x') (f y y') (f z z')
