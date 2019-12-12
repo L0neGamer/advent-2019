@@ -1,5 +1,6 @@
 module Useful where
 import System.CPUTime
+import qualified System.IO
 
 ---- thanks to https://stackoverflow.com/questions/4978578/how-to-split-a-string-in-haskell
 wordsWhen     :: (Char -> Bool) -> String -> [String]
@@ -26,3 +27,5 @@ enumerate' (x:xs) i = (i, x):enumerate' xs (i+1)
 
 replaceAt n xs x = fst splitLst ++ [x] ++ (tail $ snd splitLst)
   where splitLst = splitAt (fromInteger n) xs
+
+readfile str = System.IO.readFile str

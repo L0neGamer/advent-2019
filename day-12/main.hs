@@ -1,7 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE BangPatterns #-}
 import Useful
-import System.IO
 import Data.String
 import Data.List
 import System.CPUTime
