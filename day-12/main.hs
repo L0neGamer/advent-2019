@@ -1,11 +1,10 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE BangPatterns #-}
-
 import Useful
 import System.IO
 import Data.String
-import Debug.Trace
 import Data.List
+import System.CPUTime
 
 data Vector = Vector {x::Integer, y::Integer, z::Integer} deriving (Show, Eq)
 data Moon = Moon {pos::Vector, vel::Vector} deriving (Show, Eq)
@@ -17,12 +16,13 @@ main = do
         let lines = toLines contents
             moons = map (initMoon.toVector.fromLine) (init lines)
             moons' = steps 1000 moons
-            energy = sum $ map energyMoon moons'
---        print lines
---        print moons
-        print moons'
+            energy = (sum.(map energyMoon)) moons'
+        start <- getCPUTime
         print energy
-        print $ steps' 0 moons moons
+        middle <- timeDif start
+        print $ findRestart moons
+        end <- timeDif middle
+        putStr ""
 
 funcVec :: (Integer -> Integer -> Integer) -> Vector -> Vector -> Vector
 funcVec f (Vector x y z) (Vector x' y' z') = Vector (f x x') (f y y') (f z z')
@@ -43,10 +43,37 @@ energyMoon :: Moon -> Integer
 energyMoon Moon{..} = (atVector absAdd pos) * (atVector absAdd vel)
   where absAdd = \x y -> (abs x) + (abs y)
 
-steps' :: Integer -> [Moon] -> [Moon] -> Integer
-steps' !n orig !new
-  | orig == new && n > 0 = n
-  | otherwise = steps' (n + 1) orig (step new)
+cmpMoonVec :: Moon -> (Vector -> Integer) -> Moon -> Bool
+cmpMoonVec Moon{..} f (Moon p' v') = f pos == f p' && f vel == f v'
+
+findWhen' :: [(Moon -> Bool)] -> [Moon] -> Bool
+findWhen' [f] [m] = f m
+findWhen' (f:fs) (m:ms) = f m && findWhen' fs ms
+
+findWhen :: Integer -> ([Moon] -> Bool) -> [Moon] -> Integer
+findWhen n f ms
+  | n > 0 && f ms = n
+  | otherwise = findWhen (n + 1) f (step ms)
+
+findWhenSingle :: Integer -> (Integer, Integer, Integer) -> ([Moon] -> Bool, [Moon] -> Bool, [Moon] -> Bool) -> [Moon] -> (Integer, Integer, Integer)
+findWhenSingle n vs@(x, y, z) fs@(fx,fy,fz) ms
+  | x > 0 && y > 0 && z > 0 = vs
+  | otherwise = findWhenSingle (n + 1) (x', y', z') fs (step ms)
+  where helper ff f | f == 0 && ff ms = n
+                    | otherwise = f
+        x' = helper fx x
+        y' = helper fy y
+        z' = helper fz z
+
+findRestart :: [Moon] -> Integer
+findRestart ms = lcm x_val (lcm y_val z_val)
+  where originals = \f -> map (\m -> cmpMoonVec m f) ms
+        fs = ((findWhen' (originals x)), findWhen' (originals y), findWhen' (originals z))
+        (x_val, y_val, z_val) = findWhenSingle 0 (0,0,0) fs ms
+--        findRestart' = \f -> findWhen 0 (findWhen' (originals f)) ms
+--        x_val = findRestart' x
+--        y_val = findRestart' y
+--        z_val = findRestart' z
 
 steps :: Integer -> [Moon] -> [Moon]
 steps 0 ms = ms
@@ -64,7 +91,7 @@ adjustAllVel ms = map (flip adjustVel ms) ms
 
 adjustVel :: Moon -> [Moon] -> Moon
 adjustVel m [] = m
-adjustVel !(Moon {..}) ((Moon pos' _):ms) = adjustVel m' ms
+adjustVel (Moon {..}) ((Moon pos' _):ms) = adjustVel m' ms
   where m' = Moon pos $ funcVec (+) vel (compVec pos pos')
 
 initMoon :: Vector -> Moon
