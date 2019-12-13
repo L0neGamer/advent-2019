@@ -42,7 +42,10 @@ callFunc (SF2 f _) a b = f a b
 callFunc (SF1 f _) a _ = f a
 
 runStr :: String -> [Integer] -> ProgramState
-runStr str inputs = runProg $ ProgStat (fromInput str) 0 inputs [] 0 Running
+runStr str inputs = runProg $ initState str inputs
+
+initState :: String -> [Integer] -> ProgramState
+initState str inputs = ProgStat (fromInput str) 0 inputs [] 0 Running
 
 consPSFromMem :: Mem -> ProgramState
 consPSFromMem mem = ProgStat mem 0 [] [] 0 Running
@@ -68,6 +71,7 @@ boolFToInteger f a b = toInteger $ fromEnum (f a b)
 setInput ProgStat{..} inp' = ProgStat mem pc inp' out rel es
 setEndState ProgStat{..} es' = ProgStat mem pc inp out rel es'
 setProgramCounter ProgStat{..} pc' = ProgStat mem pc' inp out rel es
+clearBuffs ProgStat{..} = ProgStat mem pc [] [] rel es
 
 runOp :: Op -> ProgramState -> ProgramState
 runOp (BinOp f p1 p2 p3) ps = runBinOp f p1 p2 p3 ps
