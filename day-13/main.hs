@@ -5,7 +5,6 @@ import IntCode
 import Data.String
 import Data.List
 import System.CPUTime
-import Debug.Trace
 import qualified Data.Map as M
 
 data Object = Empty | Wall | Block | Paddle | Ball deriving (Show, Eq, Ord)
@@ -32,17 +31,18 @@ main = do
         print $ playGame rn
         putStr ""
 
-playGame' :: ProgramState -> BoardInfo
-playGame' !ps@ProgStat{es=Halted} = parseOut (out ps)
-playGame' !ps@ProgStat{es=AwaitInput} = playGame' ps'
+playGame' :: ProgramState -> Board -> BoardInfo
+playGame' !ps@ProgStat{es=Halted} _ = parseOut (out ps)
+playGame' !ps@ProgStat{es=AwaitInput} board' = playGame' ps' board''
   where BoardInfo{..} = parseOut (out ps)
+        board'' = M.union board board'
         adjustment | fst paddlePos > fst ballPos = -1
                    | fst paddlePos < fst ballPos = 1
                    | otherwise = 0
         ps' = runProg $ setEndState (setInput (clearBuffs ps) [adjustment]) Running
 
 playGame :: ProgramState -> BoardInfo
-playGame ps@(ProgStat {mem=mem}) = playGame' ps'
+playGame ps@(ProgStat {mem=mem}) = playGame' ps' M.empty
   where initialised = M.insert 0 2 mem
         ps' = runProg $ consPSFromMem initialised
 
@@ -54,7 +54,7 @@ drawObject Paddle = '-'
 drawObject Ball = 'o'
 
 drawBoard :: Board -> String
-drawBoard board = concat [ getRow y | y <- [min_y..max_y]]
+drawBoard board = "/" ++  bar ++ "\\\n" ++ (concat [ getRow y | y <- [min_y..max_y]]) ++ "\\" ++ bar ++ "/\n"
   where keys = M.keys board :: [Point]
         tup_cmp fnc a b = compare (fnc a) (fnc b)
         getMostVal cmp fnc ks = fnc $ cmp (tup_cmp fnc) ks
@@ -62,7 +62,8 @@ drawBoard board = concat [ getRow y | y <- [min_y..max_y]]
         min_x = 0
         max_y = getMostVal maximumBy snd keys
         min_y = 0
-        getRow y = [drawObject (M.findWithDefault Empty (x,y) board) | x <- [min_x..max_x]] ++ "\n" :: String
+        bar = ['-' | _ <- [min_x..max_x]]
+        getRow y = "|" ++ [drawObject (M.findWithDefault Empty (x,y) board) | x <- [min_x..max_x]] ++ "|\n" :: String
 
 toObject :: Integer -> Object
 toObject 0 = Empty
