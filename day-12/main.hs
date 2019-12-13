@@ -4,9 +4,10 @@ import Useful
 import Data.String
 import Data.List
 import System.CPUTime
+import Debug.Trace
 
-data Vector = Vector {x::Integer, y::Integer, z::Integer} deriving (Show, Eq)
-data Moon = Moon {pos::Vector, vel::Vector} deriving (Show, Eq)
+data Vector = Vector {x::Integer, y::Integer, z::Integer} deriving (Show, Eq, Ord)
+data Moon = Moon {pos::Vector, vel::Vector} deriving (Show, Eq, Ord)
 
 main = do
         contents <- readFile "input.txt"
@@ -44,6 +45,8 @@ energyMoon Moon{..} = (atVector absAdd pos) * (atVector absAdd vel)
 
 cmpMoonVec :: Moon -> (Vector -> Integer) -> Moon -> Bool
 cmpMoonVec Moon{..} f (Moon p' v') = f pos == f p' && f vel == f v'
+cmpMoonVec' :: Moon -> (Vector -> Integer) -> Moon -> Bool
+cmpMoonVec' Moon{..} f (Moon _ v') = f vel == f v'
 
 findWhen' :: [(Moon -> Bool)] -> [Moon] -> Bool
 findWhen' [f] [m] = f m
@@ -54,7 +57,11 @@ findWhen n f ms
   | n > 0 && f ms = n
   | otherwise = findWhen (n + 1) f (step ms)
 
-findWhenSingle :: Integer -> (Integer, Integer, Integer) -> ([Moon] -> Bool, [Moon] -> Bool, [Moon] -> Bool) -> [Moon] -> (Integer, Integer, Integer)
+findWhenSingle :: Integer
+               -> (Integer, Integer, Integer)
+               -> ([Moon] -> Bool, [Moon] -> Bool, [Moon] -> Bool)
+               -> [Moon]
+               -> (Integer, Integer, Integer)
 findWhenSingle n vs@(x, y, z) fs@(fx,fy,fz) ms
   | x > 0 && y > 0 && z > 0 = vs
   | otherwise = findWhenSingle (n + 1) (x', y', z') fs (step ms)
@@ -65,10 +72,10 @@ findWhenSingle n vs@(x, y, z) fs@(fx,fy,fz) ms
         z' = helper fz z
 
 findRestart :: [Moon] -> Integer
-findRestart ms = lcm x_val (lcm y_val z_val)
-  where originals = \f -> map (\m -> cmpMoonVec m f) ms
+findRestart ms = trace (show xs) $ 2 * lcm x_val (lcm y_val z_val)
+  where originals = \f -> map (\m -> cmpMoonVec' m f) ms
         fs = ((findWhen' (originals x)), findWhen' (originals y), findWhen' (originals z))
-        (x_val, y_val, z_val) = findWhenSingle 0 (0,0,0) fs ms
+        xs@(x_val, y_val, z_val) = findWhenSingle 0 (0,0,0) fs ms
 --        findRestart' = \f -> findWhen 0 (findWhen' (originals f)) ms
 --        x_val = findRestart' x
 --        y_val = findRestart' y
@@ -106,3 +113,22 @@ fromLine :: String -> [Integer]
 fromLine str = map (\xs -> (read::String->Integer) (xs!!1)) split'
   where split = fromStr (tail str) ','
         split' = map (flip fromStr '=') split
+
+getMoons :: [Integer] -> [Moon]
+getMoons [] = []
+getMoons (x:y:z:xs) = ((initMoon . toVector) [x,y,z]) : getMoons xs
+getMoons xs = []
+
+prime_factors :: Integer -> [Integer]
+prime_factors 1 = []
+prime_factors i = divisor:next
+  where divisor = prime_factors' i primes
+        next = prime_factors (div i divisor)
+prime_factors' :: Integer -> [Integer] -> Integer
+prime_factors' i (p:ps)
+  | rem i p == 0 = p
+  | otherwise = prime_factors' i ps
+
+primes = 2 : primes'
+  where isPrime (p:ps) n = p*p > n || n `rem` p /= 0 && isPrime ps n
+        primes' = 3 : filter (isPrime primes') [5, 7 ..]
