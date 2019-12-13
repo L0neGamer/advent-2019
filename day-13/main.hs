@@ -36,9 +36,7 @@ playGame' !ps@ProgStat{es=Halted} _ = parseOut (out ps)
 playGame' !ps@ProgStat{es=AwaitInput} board' = playGame' ps' board''
   where BoardInfo{..} = parseOut (out ps)
         board'' = M.union board board'
-        adjustment | fst paddlePos > fst ballPos = -1
-                   | fst paddlePos < fst ballPos = 1
-                   | otherwise = 0
+        adjustment = compInt (fst paddlePos) (fst ballPos)
         ps' = runProg $ setEndState (setInput (clearBuffs ps) [adjustment]) Running
 
 playGame :: ProgramState -> BoardInfo
@@ -88,28 +86,3 @@ parseOut (4:y:x:xs) = BoardInfo (M.insert pos Ball board) score pos paddlePos bl
 parseOut (t:y:x:xs) = BoardInfo (M.insert pos (toObject t) board) score ballPos paddlePos blocks
   where BoardInfo{..} = parseOut xs
         pos = (x,y)
-
-notEmpty :: [[a]] -> [[a]]
-notEmpty [] = []
-notEmpty ([]:xs) = notEmpty xs
-notEmpty (x:xs) = x:notEmpty xs
-
-compInt :: Integer -> Integer -> Integer
-compInt x x'
-  | x > x' = -1
-  | x < x' = 1
-  | x == x' = 0
-
-prime_factors :: Integer -> [Integer]
-prime_factors 1 = []
-prime_factors i = divisor:next
-  where divisor = prime_factors' i primes
-        next = prime_factors (div i divisor)
-prime_factors' :: Integer -> [Integer] -> Integer
-prime_factors' i (p:ps)
-  | rem i p == 0 = p
-  | otherwise = prime_factors' i ps
-
-primes = 2 : primes'
-  where isPrime (p:ps) n = p*p > n || n `rem` p /= 0 && isPrime ps n
-        primes' = 3 : filter (isPrime primes') [5, 7 ..]

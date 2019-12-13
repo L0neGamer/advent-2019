@@ -29,3 +29,28 @@ replaceAt n xs x = fst splitLst ++ [x] ++ (tail $ snd splitLst)
   where splitLst = splitAt (fromInteger n) xs
 
 readfile str = System.IO.readFile str
+
+prime_factors :: Integer -> [Integer]
+prime_factors 1 = []
+prime_factors i = divisor:next
+  where divisor = prime_factors' i primes
+        next = prime_factors (div i divisor)
+prime_factors' :: Integer -> [Integer] -> Integer
+prime_factors' i (p:ps)
+  | rem i p == 0 = p
+  | otherwise = prime_factors' i ps
+
+primes = 2 : primes'
+  where isPrime (p:ps) n = p*p > n || n `rem` p /= 0 && isPrime ps n
+        primes' = 3 : filter (isPrime primes') [5, 7 ..]
+
+notEmpty :: [[a]] -> [[a]]
+notEmpty [] = []
+notEmpty ([]:xs) = notEmpty xs
+notEmpty (x:xs) = x:notEmpty xs
+
+compInt :: Integer -> Integer -> Integer
+compInt x x'
+  | x > x' = -1
+  | x < x' = 1
+  | x == x' = 0
