@@ -86,4 +86,3 @@ getRecipes :: String -> Recipes
 getRecipes str = M.fromList splitIntoRecipes
   where lines = fromStr str '\n'
         splitIntoRecipes = map (getRecipes'.(splitOn " => ")) lines
---        deeply_mapped = map ((map (map (splitOn " "))).(map (splitOn ", ")).(splitOn " => ")) $ splitOn "\n" contents
