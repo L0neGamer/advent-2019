@@ -56,7 +56,7 @@ neededIngredients :: [Material] -> Ingredients -> Recipes -> StoredMaterials -> 
 neededIngredients [] is _ stm = (stm, M.findWithDefault 0 "ORE" is)
 neededIngredients (m:ms) is rec stm = neededIngredients noOre (combineIngredients (M.delete m is) is') rec stm'
   where (stm', is') = neededIngredients' (m, is M.! m) rec stm
-        noOre = nub (ms ++ (delete "ORE" $ M.keys is'))
+        noOre = nub $ ms ++ (delete "ORE" $ M.keys is')
 
 findResourcesForFuel :: Integer -> Recipes -> Integer
 findResourcesForFuel i rec = snd $  neededIngredients ["FUEL"] (M.fromList [("FUEL", i)]) rec M.empty
@@ -75,14 +75,15 @@ combineIngredients i i' = M.unionWith (+) i i'
 
 parseIngredient :: String -> Ingredient
 parseIngredient str = (split!!1, read (split!!0))
-  where split = fromStr str ' '
+  where split = splitOn " " str
 
 getRecipes' :: [String] -> (Material, (Integer, Ingredients))
 getRecipes' (x:[y]) = (mat, (amount, ingredients))
-  where ingredients = M.fromList $ map parseIngredient (fromStr x ',')
+  where ingredients = M.fromList $ map parseIngredient (splitOn ", " x)
         (mat, amount) = parseIngredient y
 
 getRecipes :: String -> Recipes
 getRecipes str = M.fromList splitIntoRecipes
   where lines = fromStr str '\n'
-        splitIntoRecipes = map (getRecipes'.(flip fromStr '=').(delete '>')) lines
+        splitIntoRecipes = map (getRecipes'.(splitOn " => ")) lines
+--        deeply_mapped = map ((map (map (splitOn " "))).(map (splitOn ", ")).(splitOn " => ")) $ splitOn "\n" contents

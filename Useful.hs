@@ -2,6 +2,21 @@ module Useful where
 import System.CPUTime
 import qualified System.IO
 
+splitOn'' :: Char -> [String] -> [String]
+splitOn'' c [] = [[c]]
+splitOn'' c ([]:xs) = [c]:xs
+splitOn'' c (x:xs) = (c:x):xs
+
+splitOn :: String -> String -> [String]
+splitOn _ [] = []
+splitOn [] (s:str) = [s] : splitOn [] str
+splitOn splitStr (s:str)
+  | splitStrLen > length str = [s:str]
+  | take splitStrLen (s:str) == splitStr = "" : splitOn splitStr (drop splitStrLen (s:str))
+  | otherwise = splitOn'' s $ splitOn splitStr str
+  where splitStrLen = length splitStr
+
+
 ---- thanks to https://stackoverflow.com/questions/4978578/how-to-split-a-string-in-haskell
 wordsWhen     :: (Char -> Bool) -> String -> [String]
 wordsWhen p s =  case dropWhile p s of
