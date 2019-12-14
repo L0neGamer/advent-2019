@@ -16,17 +16,16 @@ type Recipes = M.Map Material (Integer, Ingredients)
 
 main = do
         contents <- Useful.readFile "input.txt"
+--        contents <- Useful.readFile "inputryan.txt"
 --        contents <- Useful.readFile "inputtest.txt"
 --        contents <- Useful.readFile "inputtest2.txt"
 --        contents <- Useful.readFile "inputtest3.txt"
 --        contents <- Useful.readFile "inputtest4.txt"
 --        contents <- Useful.readFile "inputtest5.txt"
         let rec = getRecipes contents
-            ore = callGetFuel rec M.empty
-        print $ rec
+            ore = findResourcesForFuel 1 rec
         print $ ore
-        print $ findFuelFor rec 1000000000000 1 1400
---        print $ maxFuelGivenOre 0 1000000000000 1000000000000 rec M.empty
+        print $ findFuelFor rec 1000000000000 1 1572360
         putStr ""
 
 getAmount :: Material -> Recipes -> Integer
@@ -42,75 +41,37 @@ increaseTo :: Integer -> Integer -> Ingredients -> (Integer, Ingredients)
 increaseTo aim produced ingredients = (produced', ingredients')
   where multiplier = ceiling $ (fromIntegral aim) / (fromIntegral produced)
         produced' = multiplier * produced
-        ingredients' = M.fromList $ map (\(mat, i) -> (mat, i * multiplier)) (M.toList ingredients)
+        ingredients' = M.map (* multiplier) ingredients
 
 neededIngredients' :: Ingredient -> Recipes -> StoredMaterials -> (StoredMaterials, Ingredients)
+neededIngredients' (mat, 0) rec stm = (M.empty, M.empty)
 neededIngredients' (mat, amount) rec stm
   | storedAmount >= amount = (M.insert mat (storedAmount - amount) stm, M.empty)
   | storedAmount <  amount = (M.insert mat (produced' + storedAmount - amount) stm, ingredients')
   where storedAmount = M.findWithDefault 0 mat stm
-        (produced, ingredients) = rec M.! mat
+        (produced,  ingredients)  = rec M.! mat
         (produced', ingredients') = increaseTo (amount - storedAmount) produced ingredients
 
 neededIngredients :: [Material] -> Ingredients -> Recipes -> StoredMaterials -> (StoredMaterials, Integer)
-neededIngredients ["ORE"] is _ stm = (stm, is M.! "ORE")
---neededIngredients ("ORE":ms) is rec stm = neededIngredients (collapseMaterials $ ms ++ ["ORE"]) is rec stm
-neededIngredients (m:ms) is rec stm = neededIngredients (collapseMaterials (ms ++ M.keys is')) (combineIngredients (M.delete m is) is') rec stm'
+neededIngredients [] is _ stm = (stm, M.findWithDefault 0 "ORE" is)
+neededIngredients (m:ms) is rec stm = neededIngredients noOre (combineIngredients (M.delete m is) is') rec stm'
   where (stm', is') = neededIngredients' (m, is M.! m) rec stm
-neededIngredients ms is rec stm = error $ "materials:" ++ show ms ++ "\nis:" ++ show is ++ "\nstm:" ++ show stm
+        noOre = nub (ms ++ (delete "ORE" $ M.keys is'))
 
 findResourcesForFuel :: Integer -> Recipes -> Integer
 findResourcesForFuel i rec = snd $  neededIngredients ["FUEL"] (M.fromList [("FUEL", i)]) rec M.empty
 
-callGetFuel :: Recipes -> StoredMaterials -> (StoredMaterials, Integer)
-callGetFuel rec stm = neededIngredients ["FUEL"] (M.fromList [("FUEL", 1)]) rec stm
-
 findFuelFor' :: Recipes -> Integer -> Integer -> Integer -> Maybe Integer
-findFuelFor' rec oreAim lower upper
-  | oreAim > oreUpper = Nothing
-  | orePivot == oreAim = Just pivot
-  | oreUpper == oreAim = Just upper
-  | oreLower == oreAim = Just lower
-  | pivot == lower && oreUpper > oreAim = Just pivot
-  | oreAim > orePivot = findFuelFor' rec oreAim pivot upper
-  | oreAim < orePivot = findFuelFor' rec oreAim lower pivot
-  where oreLower = findResourcesForFuel lower rec
-        oreUpper = findResourcesForFuel upper rec
-        pivot = div (lower+upper) 2
-        orePivot = findResourcesForFuel pivot rec
+findFuelFor' rec oreAim lower upper = binarySearch oreAim lower upper f
+  where f = flip findResourcesForFuel rec
 
 findFuelFor :: Recipes -> Integer -> Integer -> Integer -> Integer
 findFuelFor rec oreAim lower upper = result $ findFuelFor' rec oreAim lower upper
   where result (Just a) = a
-        result Nothing = findFuelFor rec oreAim lower (2 * upper)
-
-checkIfZeroed :: StoredMaterials -> Bool
-checkIfZeroed stm = 0 == sum'
-  where sum' = (sum.(map snd)) (M.toList stm)
+        result Nothing = findFuelFor rec oreAim upper (2 * upper)
 
 combineIngredients :: Ingredients -> Ingredients -> Ingredients
 combineIngredients i i' = M.unionWith (+) i i'
-
-removeDuplicates' :: (Eq a) => a -> [a] -> [a]
-removeDuplicates' x' [] = []
-removeDuplicates' x' (y:ys)
-  | x' == y = removeDuplicates' x' ys
-  | otherwise = y: removeDuplicates' x' ys
-
-removeDuplicates :: (Eq a) => [a] -> [a]
-removeDuplicates [] = []
-removeDuplicates (x:xs) = x : removeDuplicates next
-  where next = removeDuplicates' x xs
-
-collapseMaterials :: [Material] -> [Material]
-collapseMaterials materials = sortBy oreAtBack $ removeDuplicates materials
-
-oreAtBack :: Material -> Material -> Ordering
-oreAtBack m m'
-  | m == m' = EQ
-  | m == "ORE" = GT
-  | m' == "ORE" = LT
-  | otherwise = EQ
 
 parseIngredient :: String -> Ingredient
 parseIngredient str = (split!!1, read (split!!0))

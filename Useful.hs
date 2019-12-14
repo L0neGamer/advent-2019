@@ -54,3 +54,17 @@ compInt x x'
   | x > x' = -1
   | x < x' = 1
   | x == x' = 0
+
+binarySearch :: (Integral a, Ord b) => b -> a -> a -> (a -> b) -> Maybe a
+binarySearch aim lower upper f
+  | aim > upperVal = Nothing
+  | pivotVal == aim = Just pivot
+  | upperVal == aim = Just upper
+  | lowerVal == aim = Just lower
+  | pivot == lower && upperVal > aim = Just pivot
+  | aim > pivotVal = binarySearch aim pivot upper f
+  | aim < pivotVal = binarySearch aim lower pivot f
+  where lowerVal = f lower
+        upperVal = f upper
+        pivot = div (lower+upper) 2
+        pivotVal = f pivot
