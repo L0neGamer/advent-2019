@@ -28,7 +28,7 @@ enumerate' (x:xs) i = (i, x):enumerate' xs (i+1)
 replaceAt n xs x = fst splitLst ++ [x] ++ (tail $ snd splitLst)
   where splitLst = splitAt (fromInteger n) xs
 
-readfile str = System.IO.readFile str
+readFile str = System.IO.readFile str
 
 prime_factors :: Integer -> [Integer]
 prime_factors 1 = []
