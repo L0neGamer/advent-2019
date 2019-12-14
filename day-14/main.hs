@@ -25,7 +25,8 @@ main = do
         let rec = getRecipes contents
             ore = findResourcesForFuel 1 rec
         print $ ore
-        print $ findFuelFor rec 1000000000000 1 1572360
+--        print $ findFuelFor rec 1000000000000 1 1572360
+        print $ findFuelFor rec 1000000000000
         putStr ""
 
 getAmount :: Material -> Recipes -> Integer
@@ -61,14 +62,8 @@ neededIngredients (m:ms) is rec stm = neededIngredients noOre (combineIngredient
 findResourcesForFuel :: Integer -> Recipes -> Integer
 findResourcesForFuel i rec = snd $  neededIngredients ["FUEL"] (M.fromList [("FUEL", i)]) rec M.empty
 
-findFuelFor' :: Recipes -> Integer -> Integer -> Integer -> Maybe Integer
-findFuelFor' rec oreAim lower upper = binarySearch oreAim lower upper f
-  where f = flip findResourcesForFuel rec
-
-findFuelFor :: Recipes -> Integer -> Integer -> Integer -> Integer
-findFuelFor rec oreAim lower upper = result $ findFuelFor' rec oreAim lower upper
-  where result (Just a) = a
-        result Nothing = findFuelFor rec oreAim upper (2 * upper)
+findFuelFor :: Recipes -> Integer -> Integer
+findFuelFor rec oreAim = callBinarySearch oreAim (flip findResourcesForFuel rec)
 
 combineIngredients :: Ingredients -> Ingredients -> Ingredients
 combineIngredients i i' = M.unionWith (+) i i'

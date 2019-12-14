@@ -1,6 +1,8 @@
 module Useful where
 import System.CPUTime
 import qualified System.IO
+import Data.Maybe
+import Data.Either
 
 splitOn'' :: Char -> [String] -> [String]
 splitOn'' c [] = [[c]]
@@ -70,13 +72,31 @@ compInt x x'
   | x < x' = 1
   | x == x' = 0
 
-binarySearch :: (Integral a, Ord b) => b -> a -> a -> (a -> b) -> Maybe a
+fromRight (Right a) = a
+fromLeft (Left a) = a
+
+callBinarySearch :: (Integral a, Ord b) => b -> (a -> b) -> a
+callBinarySearch aim f = callBinarySearch' aim 1 10 f
+
+callBinarySearch' :: (Integral a, Ord b) => b -> a -> a -> (a -> b) -> a
+callBinarySearch' aim lower upper f
+  | isRight searched = fromRight searched
+  | otherwise = res f
+  where searched = binarySearch aim lower upper f
+        leftVal = fromLeft searched
+        res | leftVal == 0  = callBinarySearch' aim (upper - 1) (lower + 1)
+            | leftVal == -1 = callBinarySearch' aim (lower - 1 - (abs lower)) upper
+            | leftVal == 1  = callBinarySearch' aim lower (upper + 1 + (abs upper))
+
+binarySearch :: (Integral a, Ord b) => b -> a -> a -> (a -> b) -> Either Int a
 binarySearch aim lower upper f
-  | aim > upperVal = Nothing
-  | pivotVal == aim = Just pivot
-  | upperVal == aim = Just upper
-  | lowerVal == aim = Just lower
-  | pivot == lower && upperVal > aim = Just pivot
+  | lower >= upper = Left 0
+  | aim > upperVal = Left 1
+  | aim < lowerVal = Left (-1)
+  | pivotVal == aim = return pivot
+  | upperVal == aim = return upper
+  | lowerVal == aim = return lower
+  | pivot == lower && upperVal > aim = return pivot
   | aim > pivotVal = binarySearch aim pivot upper f
   | aim < pivotVal = binarySearch aim lower pivot f
   where lowerVal = f lower
