@@ -25,6 +25,7 @@ main = do
             ore = callGetFuel rec M.empty
         print $ rec
         print $ ore
+        print $ findFuelFor rec 1000000000000 1 1400
 --        print $ maxFuelGivenOre 0 1000000000000 1000000000000 rec M.empty
         putStr ""
 
@@ -56,27 +57,32 @@ neededIngredients ["ORE"] is _ stm = (stm, is M.! "ORE")
 --neededIngredients ("ORE":ms) is rec stm = neededIngredients (collapseMaterials $ ms ++ ["ORE"]) is rec stm
 neededIngredients (m:ms) is rec stm = neededIngredients (collapseMaterials (ms ++ M.keys is')) (combineIngredients (M.delete m is) is') rec stm'
   where (stm', is') = neededIngredients' (m, is M.! m) rec stm
+neededIngredients ms is rec stm = error $ "materials:" ++ show ms ++ "\nis:" ++ show is ++ "\nstm:" ++ show stm
+
+findResourcesForFuel :: Integer -> Recipes -> Integer
+findResourcesForFuel i rec = snd $  neededIngredients ["FUEL"] (M.fromList [("FUEL", i)]) rec M.empty
 
 callGetFuel :: Recipes -> StoredMaterials -> (StoredMaterials, Integer)
 callGetFuel rec stm = neededIngredients ["FUEL"] (M.fromList [("FUEL", 1)]) rec stm
 
+findFuelFor' :: Recipes -> Integer -> Integer -> Integer -> Maybe Integer
+findFuelFor' rec oreAim lower upper
+  | oreAim > oreUpper = Nothing
+  | orePivot == oreAim = Just pivot
+  | oreUpper == oreAim = Just upper
+  | oreLower == oreAim = Just lower
+  | pivot == lower && oreUpper > oreAim = Just pivot
+  | oreAim > orePivot = findFuelFor' rec oreAim pivot upper
+  | oreAim < orePivot = findFuelFor' rec oreAim lower pivot
+  where oreLower = findResourcesForFuel lower rec
+        oreUpper = findResourcesForFuel upper rec
+        pivot = div (lower+upper) 2
+        orePivot = findResourcesForFuel pivot rec
 
-
---maxFuelGivenOre :: Recipes -> Integer -> Integer -> StoredMaterials -> Integer -> (StoredMaterials, Integer)
---maxFuelGivenOre acc oreLeft oreBeginning rec stm
---  | checkIfZeroed stm && acc > 0 = acc' + maxFuelGivenOre 0 (ore'') oreBeginning rec M.empty
---  | oreLeft > ore' = trace (show oreLeft ++"ore,acc"++ show acc ++ "ore'" ++ show ore') $ maxFuelGivenOre (acc+1) (oreLeft - ore') oreBeginning rec stm'
---  | otherwise = acc
---  where ret@(stm', ore') = callGetFuel rec stm
---        ratio = div oreBeginning (oreBeginning - oreLeft)
---        acc' = (acc) * ratio
---        ore'' = (oreBeginning - oreLeft)
---              | otherwise = oreLeft - ore'
---  | acc > 0 && checkIfZeroed stm = maxFuelGivenOre rec (primeOre - ore) primeOre stm' (acc * (div primeOre (primeOre - ore)))
---  | ore > ore' = maxFuelGivenOre rec (ore - ore') primeOre stm' (acc + 1)
---  | otherwise = (ore, acc)
---  where ret@(stm', ore') = callGetFuel rec (trace (show ore) stm)
-
+findFuelFor :: Recipes -> Integer -> Integer -> Integer -> Integer
+findFuelFor rec oreAim lower upper = result $ findFuelFor' rec oreAim lower upper
+  where result (Just a) = a
+        result Nothing = findFuelFor rec oreAim lower (2 * upper)
 
 checkIfZeroed :: StoredMaterials -> Bool
 checkIfZeroed stm = 0 == sum'
