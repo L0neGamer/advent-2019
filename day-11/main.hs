@@ -60,9 +60,3 @@ paintingChassis !ps pm !p !b = paintingChassis ps' pm' p' b'
                        | dir == 1 = bearingClockwise
         b' = bearingConvert b
         p' = moveInBearing p b'
-
-moveInBearing :: Point -> Bearing -> Point
-moveInBearing (x, y) N = (x, y+1)
-moveInBearing (x, y) E = (x+1, y)
-moveInBearing (x, y) W = (x-1, y)
-moveInBearing (x, y) S = (x, y-1)

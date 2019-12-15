@@ -27,11 +27,6 @@ data ProgramState = ProgStat
   , rel :: !RelativeBase
   , es  :: !EndState
   } deriving Show
-type Point = (Integer, Integer)
-type TileColour = Integer
-type Tile = (TileColour, Integer)
-type PaintedMap = M.Map Point Tile
-data Bearing = N | S | E | W
 
 instance Show StoredFunc where
   show (SF2 _ str) = "(SF2 " ++ str ++ ")"

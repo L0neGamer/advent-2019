@@ -3,6 +3,29 @@ import System.CPUTime
 import qualified System.IO
 import Data.Maybe
 import Data.Either
+import qualified Data.Map as M
+import Data.List
+
+type Point = (Integer, Integer)
+type TileType = Integer
+type Tile = (TileType, Point)
+type TileMap = M.Map Point Tile
+data Bearing = N | S | E | W
+
+getBearing :: Point -> Point -> Bearing
+getBearing (x, y) (x', y')
+  | abs xDif > abs yDif && xDif > 0 = E
+  | abs xDif > abs yDif && xDif < 0 = W
+  | yDif < 0 = S
+  | yDif > 0 = N
+  where xDif = x' - x
+        yDif = y' - y
+
+moveInBearing :: Point -> Bearing -> Point
+moveInBearing (x, y) N = (x, y+1)
+moveInBearing (x, y) E = (x+1, y)
+moveInBearing (x, y) W = (x-1, y)
+moveInBearing (x, y) S = (x, y-1)
 
 splitOn'' :: Char -> [String] -> [String]
 splitOn'' c [] = [[c]]
@@ -103,3 +126,26 @@ binarySearch aim lower upper f
         upperVal = f upper
         pivot = div (lower+upper) 2
         pivotVal = f pivot
+
+drawInt :: Integer -> Char
+drawInt 0 = ' '
+drawInt 1 = head "\x2588"
+drawInt 2 = 'o'
+drawInt 3 = 'O'
+
+drawTileMap :: TileMap -> String
+drawTileMap pm = concat [ getRow y | y <- [max_y,(max_y-1)..min_y]]
+  where keys = M.keys pm :: [Point]
+        tup_cmp fnc a b = compare (fnc a) (fnc b)
+        getMostVal cmp fnc ks = fnc $ cmp (tup_cmp fnc) ks
+        max_x = getMostVal maximumBy fst keys
+        min_x = getMostVal minimumBy fst keys
+        max_y = getMostVal maximumBy snd keys
+        min_y = getMostVal minimumBy snd keys
+        getRow y = [drawInt (fst (M.findWithDefault (0,(0,0)) (x,y) pm)) | x <- [min_x..max_x]] ++ "\n" :: String
+
+manhattan (x,y) (x',y') = abs (x - x') + abs (y - y')
+
+dirtyGetPath :: Point -> TileMap -> [Point]
+dirtyGetPath (0,0) _ = []
+dirtyGetPath p tm = p : dirtyGetPath (snd $ tm M.! p) tm
