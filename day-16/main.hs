@@ -20,44 +20,38 @@ main = do
 --        print $ runNPhases t1 [1,0,-1,0] 1
 --        print $ take 8 $ runNPhases t2 [1,0,-1,0] 100
 --        print $ take 8 $ runNPhases t3 [1,0,-1,0] 100
-        print $ take 8 $ runNPhases res 100 -- 29795507
+--        print $ take 8 $ runNPhases res 100 -- 29795507
         print $ part2 (tail $ getDigits 103036732577212944063491565474664) 100 -- 84462026
         print $ part2 (tail $ getDigits 102935109699940807407585447034323) 100 -- 78725270
         print $ part2 (tail $ getDigits 103081770884921959731165446850517) 100 -- 53553731
-        print $ part2 res 100
+        print $ part2 res 100 -- not 26261059
+--        print $ part2ryan (tail $ getDigits 102935109699940807407585447034323)
         putStr ""
 
 getLastDigit :: Integer -> Integer
 getLastDigit i = mod (abs i) 10
 
-getIntegerSize :: Integer -> Integer
-getIntegerSize inp = floor $ logBase 10 (fromIntegral inp)
-
 getDigits :: Integer -> [Integer]
 getDigits inp = res
   where strInp = show inp
         res = map (\c -> read [c]) strInp
---getDigits inp = [getLastDigit (div inp num) | num <- divisors]
---  where inpLength = getIntegerSize inp
---        divisors = map floor [10**(fromIntegral d) | d <- [inpLength,(inpLength-1)..0]]
 
---part2 :: Signal -> Phase -> Integer -> Signal
+toInteger' :: (Integral b, Read b) => [Integer] -> b
+toInteger' xs = read $ concat $ map show xs
+
+part2 :: Signal -> Integer -> Signal
 part2 sig n = res'
-  where sig' = concat [sig | _ <-[0..10000]]
-        offset = read $ concat $ map (show::(Integer -> String)) $ take 7 sig :: Int
---        phases = trace (show (length sig') ++ " " ++ show (length (drop offset sig'))) reverse $ getPhases phase (fromIntegral (length sig'))
---        res = doNPhases (drop offset sig') (map (drop offset) phases) n
-        sig'' = drop (offset) sig'
-        res = trace (show (length sig'' < (div (length sig') 2))) doNPhases sig'' 100 offset (length sig')
+  where sig' = concat [sig | _ <-[1..10000]]
+        offset = toInteger' $ take 7 sig
+        sig'' = drop offset sig'
+        res = doNPhases sig'' n offset (length sig')
         res' = take 8 res
 
 runNPhases :: Signal -> Integer -> Signal
 runNPhases sig n = doNPhases sig n 0 (length sig)
---  where phases = (reverse $ getPhases phase (fromIntegral (length sig)))
 
 doNPhases :: Signal -> Integer -> Int -> Int -> Signal
 doNPhases !sig 0 _ _ = sig
---doNPhases !sig phases n startPos sigSize = trace (show (length sig) ++ " " ++ show sigSize ++ " " ++ show n) $ doNPhases next phases (n - 1) startPos sigSize
 doNPhases !sig n startPos sigSize = doNPhases next (n - 1) startPos sigSize
   where next = (fromSignal' sig startPos sigSize)
 
@@ -65,20 +59,15 @@ fromSignal :: Signal -> Signal
 fromSignal sig = fromSignal' sig 0 (length sig)
 
 sumEachTail :: Signal -> Signal
---sumEachTail [] = []
---sumEachTail (s:ss) = flip (:) (sumEachTail ss) $! ((getLastDigit.sum) (s:ss))
-sumEachTail (ss) = reverse $ map getLastDigit (scanl' (+) r rev)
+sumEachTail (ss) = reverse $ map getLastDigit (scanl' (+) r rev) -- thanks ryan
   where (r:rev) = reverse ss
 
 fromSignal' :: Signal -> Int -> Int -> Signal
---fromSignal' [] _ _ _ = error "at the disco"
 fromSignal' sig signalIndex sigLen
-  | signalIndex == sigLen = []
-  | signalIndex >= length sig = id $! sumEachTail sig
+  | signalIndex >= length sig = sumEachTail sig
   | signalIndex < sigLen = currRes:next
   | otherwise = []
   where currRes = getLastDigit $ applyPatternTo sig signalIndex sigLen
---        currRes = getLastDigit.sum $ zipWith (*) sig (phases!!signalIndex)
         next = fromSignal' (tail sig) (signalIndex + 1) sigLen
 
 applyPatternTo :: Signal -> Int -> Int -> Integer
