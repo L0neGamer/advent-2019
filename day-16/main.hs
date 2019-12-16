@@ -25,7 +25,6 @@ main = do
         print $ part2 (tail $ getDigits 102935109699940807407585447034323) 100 -- 78725270
         print $ part2 (tail $ getDigits 103081770884921959731165446850517) 100 -- 53553731
         print $ part2 res 100 -- not 26261059
---        print $ part2ryan (tail $ getDigits 102935109699940807407585447034323)
         putStr ""
 
 getLastDigit :: Integer -> Integer
