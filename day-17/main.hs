@@ -31,27 +31,15 @@ main = do
             mem' = M.insert 0 2 initMem
             res = runProg (consPSFromMem initMem)
             input = [toInputBuffProg mainStrs, toInputBuffMvs a, toInputBuffMvs b, toInputBuffMvs c, [fromIntegral (ord 'n'),10]]
-            ps = setInput (consPSFromMem mem') (concat input)
-            res' = runProg ps
-            out' = reverse $ out res
-            roboMap = parseOutput $ out'
+            ps inp = setInput (consPSFromMem mem') inp
+            res' = runProg (ps (concat input))
+            roboMap = parseOutput $ reverse $ out res
             intersections = M.keys (M.filterWithKey (\k _ -> (isIntersection k roboMap)) roboMap)
             roboMap' = M.mapWithKey (\k v -> if (k `elem` intersections) then (Vent,k) else v) roboMap
             route = getRoute roboMap
---            subLists = findSubLists route
---        print contents
---        print out'
---        putStr $ drawTileMap roboMap
---        print intersections
---        print $ map alignmentParam intersections
         print $ sum $ map alignmentParam intersections
---        putStr (drawTileMap roboMap')
---        print route
---        print input
---        putStr $ map (chr.fromIntegral) $ reverse $ out res'
         print $ head $ out res'
---        print subLists
---        print $ S.fromList $ fromJust subLists
+        print $ head $ out (runProg (ps (getBuffer route)))
         putStr ""
 
 alignmentParam :: Point -> Integer
@@ -64,9 +52,6 @@ isIntersection p tm = (Path == fst (M.findWithDefault (Wall,p) p tm)) && length 
 
 parseOutput :: OutputVals -> TileMap
 parseOutput o = parseOutput' o 0 0
---  where initMap =
---        (max_y, res) = M.mapAccumWithKey (\y (_,y') b -> (max y y',b)) 0 initMap
---        res' = M.mapKeys (\(x,y) -> (x,max_y-y)) res
 
 parseOutput' :: OutputVals -> Integer -> Integer -> TileMap
 parseOutput' [] _ _ = M.empty
@@ -112,11 +97,6 @@ getRoute :: TileMap -> [Move]
 getRoute tm = getRoute' start N tm
   where (start,_) = M.mapAccumWithKey (\a key v@(tile,_) -> if tile==Robot then (key,v) else (a,v)) (-1,-1) tm
 
-findSubLists'' :: (Eq a) => [a] -> [a] -> Bool
-findSubLists'' finding [] = False
-findSubLists'' finding xs = (finding == take len xs) || findSubLists'' finding (drop len xs)
-  where len = length finding
-
 toIntFromMv :: Move -> [Integer]
 toIntFromMv L = [76]
 toIntFromMv R = [82]
@@ -128,23 +108,52 @@ toInputBuffMvs mvs = (map (fromIntegral.ord) (tail $ init $ show mvs)) ++ [10]
 toInputBuffProg :: String -> [Integer]
 toInputBuffProg xs = (intersperse 44 (map (fromIntegral.ord) xs)) ++ [10]
 
---findSubLists' :: (Eq a, Show a, Ord a) => [a] -> Int -> Maybe S.Set [a]
---findSubLists' [] i = S.empty
---findSubLists' xs i
---  | currSub `isInfixOf` rest && isJust recurseNext = recurseNext
---  | not (currSub `isInfixOf` rest) && i == 1 = Nothing
---  | isJust finNext = S.insert currSub (fromJust finNext)
---  | otherwise = S.insert currSub ()
---  where currSub = take i xs
---        rest = drop i xs
---        recurseNext = findSubLists' xs (i + 1)
---        finNext = findSubLists rest
---findSubLists' xs i
---  | finding `isInfixOf` rest && length next < 4 = trace (show next) next
---  | otherwise = S.insert (take (i-1) xs) $ findSubLists' (drop (i-1) xs) 1
---  where finding = take i xs
---        rest = drop i xs
---        next = findSubLists' xs (i + 1)
---  | i > 1 && isJust next' = Just $ (take i xs : fromJust next')
+matchBeginningOf :: (Eq a) => [a] -> [a] -> Bool
+matchBeginningOf xs ys = length xs <= length ys && xs == (take (length xs) ys)
 
---findSubLists xs = findSubLists' xs 1
+occursIn :: (Eq a) => [a] -> [a] -> Integer
+occursIn _ [] = 0
+occursIn xs ys
+  | xs `matchBeginningOf` ys = 1 + rest
+  | otherwise = rest
+  where rest = occursIn xs (tail ys)
+
+subLists''' :: [a] -> Int -> [[a]]
+subLists''' xs 0 = []
+subLists''' xs i = (take i xs) : subLists''' xs (i - 1)
+
+subLists'' :: [a] -> [[a]]
+subLists'' [] = []
+subLists'' lst@(x:xs) = subLists''' lst (length lst) ++ subLists'' xs
+
+isTurn L = True
+isTurn R = True
+isTurn (Fwd _) = False
+
+subLists' :: [Move] -> S.Set [Move]
+subLists' as = as'
+  where as' = S.filter (\xs -> length xs > 2 && length xs < 20 && occursIn xs as > 1 && isTurn (head xs) && (not $ isTurn (last xs))) $ S.fromList $ subLists'' as
+
+--subLists :: [Move] -> [([Move], [Move], [Move])]
+subLists xs = ret
+  where candidates = S.toList $ subLists' xs
+        listLen = length candidates - 1
+        ret = [(candidates!!x,candidates!!y,candidates!!z) | x <- [0..listLen], y <- [x..listLen], z <- [y..listLen], x /= y && y /= z]
+--        candidPerms = map (\(x:y:[z]) -> (x,y,z)) $ filter (\xs -> length xs == 3) $ sortBy (\a b -> length a `compare` length b) $ subsequences (S.toList candidates)
+
+testInp :: [Move] -> ([Move],[Move],[Move]) -> Maybe ([String],([Move],[Move],[Move]))
+testInp [] tup@(a, b, c) = Just ([],tup)
+testInp xs tup@(a, b, c)
+  | (a `matchBeginningOf` xs) && isJust restA = Just $ ("A": (fst.fromJust) restA, tup)
+  | (b `matchBeginningOf` xs) && isJust restB = Just $ ("B": (fst.fromJust) restB, tup)
+  | (c `matchBeginningOf` xs) && isJust restC = Just $ ("C": (fst.fromJust) restC, tup)
+  | otherwise = Nothing
+  where restA = testInp (drop (length a) xs) tup
+        restB = testInp (drop (length b) xs) tup
+        restC = testInp (drop (length c) xs) tup
+
+getBuffer :: [Move] -> InputVals
+getBuffer xs = concat [toInputBuffProg (concat funcCalls), toInputBuffMvs a, toInputBuffMvs b, toInputBuffMvs c, [fromIntegral (ord 'n'),10]]
+  where moveCombos = subLists xs
+        validCombos = map fromJust $ filter (isJust) $ map (testInp xs) moveCombos
+        combo@(funcCalls,(a,b,c)) = head validCombos
