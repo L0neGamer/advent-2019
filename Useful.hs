@@ -5,12 +5,33 @@ import Data.Maybe
 import Data.Either
 import qualified Data.Map as M
 import Data.List
+import Debug.Trace
 
 type Point = (Integer, Integer)
-type TileType = Integer
+data TileType = Path | Wall | Vent | Robot deriving (Eq)
 type Tile = (TileType, Point)
 type TileMap = M.Map Point Tile
 data Bearing = N | S | E | W
+
+instance Show TileType where
+  show Path = "#"
+  show Wall = "\x2588"
+  show Vent = "x"
+  show Robot = "^"
+
+bearingAntiClockwise :: Bearing -> Bearing
+bearingAntiClockwise N = W
+bearingAntiClockwise E = N
+bearingAntiClockwise S = E
+bearingAntiClockwise W = S
+bearingClockwise :: Bearing -> Bearing
+bearingClockwise N = E
+bearingClockwise E = S
+bearingClockwise S = W
+bearingClockwise W = N
+
+getNeighbours :: Point -> [Point]
+getNeighbours p = map (moveInBearing p) [N,S,E,W]
 
 getBearing :: Point -> Point -> Bearing
 getBearing (x, y) (x', y')
@@ -133,8 +154,14 @@ drawInt 1 = head "\x2588"
 drawInt 2 = 'o'
 drawInt 3 = 'O'
 
+--padInt :: Integer -> Integer -> String
+--padInt i digits = trace (show dif) (zeroes) ++ show (abs i)
+--  where dif = (digits - (floor (logBase 10 (fromIntegral (abs i)))))
+--        zeroes | dif > 0 = ['0' | _ <- [0..dif]]
+--               | otherwise = []
+
 drawTileMap :: TileMap -> String
-drawTileMap pm = concat [ getRow y | y <- [max_y,(max_y-1)..min_y]]
+drawTileMap pm = " " ++ concat [show (mod x 10) | x <- [min_x..max_x]] ++ "\n" ++ concat [ getRow y | y <- [max_y,(max_y-1)..min_y]]
   where keys = M.keys pm :: [Point]
         tup_cmp fnc a b = compare (fnc a) (fnc b)
         getMostVal cmp fnc ks = fnc $ cmp (tup_cmp fnc) ks
@@ -142,7 +169,7 @@ drawTileMap pm = concat [ getRow y | y <- [max_y,(max_y-1)..min_y]]
         min_x = getMostVal minimumBy fst keys
         max_y = getMostVal maximumBy snd keys
         min_y = getMostVal minimumBy snd keys
-        getRow y = [drawInt (fst (M.findWithDefault (0,(0,0)) (x,y) pm)) | x <- [min_x..max_x]] ++ "\n" :: String
+        getRow y = show (mod (abs y) 10) ++ concat [show (fst (M.findWithDefault (Wall,(0,0)) (x,y) pm)) | x <- [min_x..max_x]] ++ "\n" :: String
 
 manhattan (x,y) (x',y') = abs (x - x') + abs (y - y')
 

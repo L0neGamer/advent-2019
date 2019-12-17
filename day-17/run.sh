@@ -1,0 +1,1 @@
+ghci ./main.hs -i../
