@@ -20,27 +20,23 @@ instance Show Move where
   show R = "R"
   show (Fwd i) = show i
 
-a = [L,Fwd 12,R,Fwd 8,L,Fwd 6,R,Fwd 8,L,Fwd 6]
-b = [R,Fwd 8,L,Fwd 12,L,Fwd 12,R,Fwd 8]
-c = [L,Fwd 6,R,Fwd 6,L,Fwd 12]
-mainStrs = "ABAABCBCCB"
-
 main = do
         contents <- Useful.readFile "input.txt"
         let initMem = fromInput contents
-            mem' = M.insert 0 2 initMem
-            res = runProg (consPSFromMem initMem)
-            input = [toInputBuffProg mainStrs, toInputBuffMvs a, toInputBuffMvs b, toInputBuffMvs c, [fromIntegral (ord 'n'),10]]
-            ps inp = setInput (consPSFromMem mem') inp
-            res' = runProg (ps (concat input))
-            roboMap = parseOutput $ reverse $ out res
-            intersections = M.keys (M.filterWithKey (\k _ -> (isIntersection k roboMap)) roboMap)
-            roboMap' = M.mapWithKey (\k v -> if (k `elem` intersections) then (Vent,k) else v) roboMap
-            route = getRoute roboMap
-        print $ sum $ map alignmentParam intersections
-        print $ head $ out res'
-        print $ head $ out (runProg (ps (getBuffer route)))
+        print $ getAlignments initMem
+        print $ getDustCleaned initMem
         putStr ""
+
+getMap :: Mem -> TileMap
+getMap mem = parseOutput $ reverse $ out $ runProg (consPSFromMem mem)
+
+getDustCleaned :: Mem -> Integer
+getDustCleaned mem = head $ out $ runProg $ setInput (consPSFromMem (M.insert 0 2 mem)) (getBuffer robotMap)
+  where robotMap = getMap mem
+
+getAlignments :: Mem -> Integer
+getAlignments mem = sum $ map alignmentParam (M.keys (M.filterWithKey (\k _ -> (isIntersection k roboMap)) roboMap))
+  where roboMap = parseOutput $ reverse $ out (runProg (consPSFromMem mem))
 
 alignmentParam :: Point -> Integer
 alignmentParam (x, y) = ((abs x)) * ((abs y))
@@ -152,8 +148,9 @@ testInp xs tup@(a, b, c)
         restB = testInp (drop (length b) xs) tup
         restC = testInp (drop (length c) xs) tup
 
-getBuffer :: [Move] -> InputVals
-getBuffer xs = concat [toInputBuffProg (concat funcCalls), toInputBuffMvs a, toInputBuffMvs b, toInputBuffMvs c, [fromIntegral (ord 'n'),10]]
-  where moveCombos = subLists xs
-        validCombos = map fromJust $ filter (isJust) $ map (testInp xs) moveCombos
+getBuffer :: TileMap -> InputVals
+getBuffer roboMap = concat [toInputBuffProg (concat funcCalls), toInputBuffMvs a, toInputBuffMvs b, toInputBuffMvs c, [fromIntegral (ord 'n'),10]]
+  where route = getRoute roboMap
+        moveCombos = subLists route
+        validCombos = map fromJust $ filter (isJust) $ map (testInp route) moveCombos
         combo@(funcCalls,(a,b,c)) = head validCombos
