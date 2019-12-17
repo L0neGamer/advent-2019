@@ -122,20 +122,15 @@ subLists'' :: [a] -> [[a]]
 subLists'' [] = []
 subLists'' lst@(x:xs) = subLists''' lst (length lst) ++ subLists'' xs
 
-isTurn L = True
-isTurn R = True
-isTurn (Fwd _) = False
-
 subLists' :: [Move] -> S.Set [Move]
 subLists' as = as'
-  where as' = S.filter (\xs -> length xs > 2 && length xs < 20 && occursIn xs as > 1 && isTurn (head xs) && (not $ isTurn (last xs))) $ S.fromList $ subLists'' as
+  where as' = S.filter (\xs -> length xs > 2 && length xs < 20 && occursIn xs as > 1) $ S.fromList $ subLists'' as
 
---subLists :: [Move] -> [([Move], [Move], [Move])]
+subLists :: [Move] -> [([Move], [Move], [Move])]
 subLists xs = ret
   where candidates = S.toList $ subLists' xs
         listLen = length candidates - 1
         ret = [(candidates!!x,candidates!!y,candidates!!z) | x <- [0..listLen], y <- [x..listLen], z <- [y..listLen], x /= y && y /= z]
---        candidPerms = map (\(x:y:[z]) -> (x,y,z)) $ filter (\xs -> length xs == 3) $ sortBy (\a b -> length a `compare` length b) $ subsequences (S.toList candidates)
 
 testInp :: [Move] -> ([Move],[Move],[Move]) -> Maybe ([String],([Move],[Move],[Move]))
 testInp [] tup@(a, b, c) = Just ([],tup)
