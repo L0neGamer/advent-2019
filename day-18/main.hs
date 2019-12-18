@@ -41,8 +41,8 @@ main = do
         putStr ""
 
 findBestRoute' :: Point -> Integer -> TileMap -> KeysToDoors -> Accessible -> [(Point, Integer)]
-findBestRoute' p dist tm ktd acc = findBestRoute p dist tm' ktd' acc'
-  where (ktd', tm', acc') = freeUpDoor p tm ktd acc
+findBestRoute' p dist tm ktd acc = findBestRoute p dist tm' ktd acc'
+  where (_, tm', acc') = freeUpDoor p tm ktd acc
 
 sumDist :: [(Point, Integer)] -> Integer
 sumDist xs = sum $ map snd xs
@@ -82,7 +82,7 @@ getKeys tm = M.keys $ M.filter (isKey.fst) tm
 
 getAccessibleKeys :: Point -> TileMap -> KeysToDoors -> S.Set Point -> Accessible
 getAccessibleKeys p tm ktd s = (map (\(p,d,_) -> (p, fromJust d)) justJusts, setStuff)
-  where toLocate = M.keys ktd
+  where toLocate = getKeys tm
         routeLengths = map (\k -> (k, getAccessibleKeys' (dijkstra' p tm k s))) toLocate
         justJusts = filter (\(k,d,_) -> k /= p && isJust d) $ map (\(k,(d,s')) -> (k,d,s')) routeLengths
         setStuff | length justJusts > 0 = foldl S.union s (map (\(_,_,s') -> s') justJusts)
@@ -95,13 +95,12 @@ freeUpDoor' p' x = (Nothing, snd x)
 trace' x = trace (show x) x
 
 freeUpDoor :: Point -> TileMap -> KeysToDoors -> Accessible -> (KeysToDoors, TileMap, Accessible)
-freeUpDoor p tm ktd acc = (ktd', tm', acc')
+freeUpDoor p tm ktd acc = (ktd, tm', acc')
   where door = if p `M.member` ktd then ktd M.! p else p
-        ktd' = if p `M.member` ktd then M.delete p ktd else ktd
         removeKey = filter (\(p',_) -> p' /= p) (fst acc)
         tm' = M.insert door (Path, door) $ M.insert p (Path, p) tm
-        newKeysDoor = if canAccess p door tm' then getAccessibleKeys door tm' ktd' (S.empty) else ([],S.empty)
-        newKeys' = getAccessibleKeys p tm' ktd' (S.empty)
+        newKeysDoor = if canAccess p door tm' then getAccessibleKeys door tm' ktd (S.empty) else ([],S.empty)
+        newKeys' = getAccessibleKeys p tm' ktd (S.empty)
         newRoutes = map ((\p' -> freeUpDoor' p' $ dijkstra' p tm' p' S.empty).fst) (removeKey ++ fst newKeysDoor)
         updatedKeys = map (\(j,s) -> (fromJust j, s)) $ filter (isJust.fst) $ newRoutes
         acc' = ((map fst updatedKeys) ++ fst newKeys', S.union (snd acc) (foldl S.union (snd newKeys') (map snd updatedKeys)))
