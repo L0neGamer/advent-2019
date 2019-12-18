@@ -1,0 +1,23 @@
+[
+A,C,B,D,A,E,B,D,A,E,
+B,D,A,C,A,C,B,D,
+A,C,B,D,A,E,B,D,A,E,
+A,C,B,D,A,E,B,D,A,E,
+B,D,A,C,A,C,B,D,
+A,E,B,E,A,C,
+B,D,A,C,A,C,B,D,
+A,E,B,E,A,C,
+A,E,B,E,A,C,
+B,D,A,C,A,C,B,D
+]
+
+A: L,Fwd 12,R,Fwd 8,L,Fwd 6,R,Fwd 8,L,Fwd 6
+B: R,Fwd 8,L,Fwd 12,L,Fwd 12,R,Fwd 8,
+C: L,Fwd 6,R,Fwd 6,L,Fwd 12
+
+
+ACBDAEBDAE
+BDACACBD
+
+
+[A,C,B,D,A,E,B,D,A,E,B,D,A,C,A,C,B,D,A,C,B,D,A,E,B,D,A,E,A,C,B,D,A,E,B,D,A,E,B,D,A,C,A,C,B,D,A,E,B,E,A,C,B,D,A,C,A,C,B,D,A,E,B,E,A,C,A,E,B,E,A,C,B,D,A,C,A,C,B,D]

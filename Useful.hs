@@ -8,16 +8,18 @@ import Data.List
 import Debug.Trace
 
 type Point = (Integer, Integer)
-data TileType = Path | Wall | Vent | Robot deriving (Eq)
+data TileType = Path | Wall | Vent | Robot | Key Char | Door Char deriving (Eq, Ord)
 type Tile = (TileType, Point)
 type TileMap = M.Map Point Tile
 data Bearing = N | S | E | W
 
 instance Show TileType where
-  show Path = "#"
+  show Path = " "
   show Wall = "\x2588"
   show Vent = "x"
   show Robot = "^"
+  show (Key c) = [c]
+  show (Door c) = [c]
 
 bearingAntiClockwise :: Bearing -> Bearing
 bearingAntiClockwise N = W
@@ -176,3 +178,13 @@ manhattan (x,y) (x',y') = abs (x - x') + abs (y - y')
 dirtyGetPath :: Point -> TileMap -> [Point]
 dirtyGetPath (0,0) _ = []
 dirtyGetPath p tm = p : dirtyGetPath (snd $ tm M.! p) tm
+
+matchBeginningOf :: (Eq a) => [a] -> [a] -> Bool
+matchBeginningOf xs ys = length xs <= length ys && xs == (take (length xs) ys)
+
+occursIn :: (Eq a) => [a] -> [a] -> Integer
+occursIn _ [] = 0
+occursIn xs ys
+  | xs `matchBeginningOf` ys = 1 + rest
+  | otherwise = rest
+  where rest = occursIn xs (tail ys)
