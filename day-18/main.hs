@@ -16,8 +16,8 @@ type Accessible = ([(Point,Integer)],S.Set Point)
 main = do
 --        contents <- Useful.readFile "input.txt"
 --        contents <- Useful.readFile "inputtest.txt"
-        contents <- Useful.readFile "inputtest2.txt"
---        contents <- Useful.readFile "inputtest3.txt"
+--        contents <- Useful.readFile "inputtest2.txt"
+        contents <- Useful.readFile "inputtest3.txt"
         let tmInit = parseOutput contents
             as = (allSpecials tm)
             end = as M.! (Door 'W')
@@ -41,7 +41,7 @@ main = do
         putStr ""
 
 findBestRoute' :: Point -> Integer -> TileMap -> KeysToDoors -> Accessible -> [(Point, Integer)]
-findBestRoute' p dist tm ktd acc = findBestRoute p dist tm' ktd acc'
+findBestRoute' !p !dist !tm !ktd !acc = findBestRoute p dist tm' ktd acc'
   where (_, tm', acc') = freeUpDoor p tm ktd acc
 
 sumDist :: [(Point, Integer)] -> Integer
