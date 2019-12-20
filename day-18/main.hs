@@ -14,6 +14,8 @@ type Keys = M.Map Point TileType
 type Doors = M.Map Point TileType
 type KeyToKey = M.Map Point (M.Map Point (Integer, [Point]))
 
+data NavState = NavStat [Point] Point Doors Keys Integer
+
 main = do
 --        contents <- Useful.readFile "input.txt"
         contents <- Useful.readFile "inputtest.txt"
@@ -27,6 +29,16 @@ main = do
         print $ aStar tm (15,3) (1,1)
         print $ getKeyToKey tm keys doors
         putStr ""
+
+pt1' :: [NavState] -> TileMap -> KeyToKey -> Keys -> Doors -> NavState
+pt1' [] tm ktk k d =
+pt1' navStats tm ktk k d
+
+pt1 :: String -> NavState
+pt1 str = pt1' [(NavStat [] robot (M.keys doors) (M.keys keys1) 0)] tm keyToKey keys doors
+  where tm' = parseOutput str
+        (tm, keys, doors, robot) = getDetails tm'
+        keyToKey = getKeyToKey tm doors keys
 
 -- https://pastebin.com/75wQ5unK
 getKeyToKey' :: TileMap -> Doors -> Point -> Point -> (Integer, [Point])
